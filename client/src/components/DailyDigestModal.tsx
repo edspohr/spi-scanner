@@ -4,11 +4,12 @@ import { X, Mail, Copy, Check, Download, Sparkles, ShieldCheck } from 'lucide-re
 import { CountryBadge } from './CountryBadge';
 
 interface DailyDigestModalProps {
+  isOpen: boolean;
   digest: DailyDigest | null;
   onClose: () => void;
 }
 
-export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onClose }) => {
+export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ isOpen, digest, onClose }) => {
   const [copied, setCopied] = useState(false);
 
   // Cerrar con Escape
@@ -16,7 +17,7 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onCl
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    if (digest) {
+    if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -24,9 +25,10 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onCl
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'auto';
     };
-  }, [digest, onClose]);
+  }, [isOpen, onClose]);
 
-  if (!digest) return null;
+  // Si no está abierto o no hay datos, no renderizar
+  if (!isOpen || !digest) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(digest.executiveBriefingText);

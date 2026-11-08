@@ -276,6 +276,7 @@ export function App() {
 
       {/* Modal de Reporte Ejecutivo Diario */}
       <DailyDigestModal
+        isOpen={isDigestOpen}
         digest={dailyDigest}
         onClose={() => setIsDigestOpen(false)}
       />
