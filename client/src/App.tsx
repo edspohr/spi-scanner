@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   RegulatoryOpportunity, 
   CountryCode, 
@@ -14,6 +14,11 @@ import {
   INITIAL_SPI_TEAM, 
   INITIAL_DAILY_DIGEST 
 } from './mock/initialData';
+import { 
+  subscribeToOpportunities, 
+  subscribeToLatestDigest, 
+  updateOpportunityInFirestore 
+} from './services/firestoreService';
 import { Navbar } from './components/Navbar';
 import { MetricCards } from './components/MetricCards';
 import { FilterBar } from './components/FilterBar';
@@ -22,22 +27,15 @@ import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { AssignmentModal } from './components/AssignmentModal';
 import { DailyDigestModal } from './components/DailyDigestModal';
 import { ScannerSimulator } from './components/ScannerSimulator';
-import { Briefcase, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { SlidersHorizontal, Cloud } from 'lucide-react';
 
 export function App() {
-  // Estado principal de oportunidades
-  const [opportunities, setOpportunities] = useState<RegulatoryOpportunity[]>(() => {
-    const saved = localStorage.getItem('spi_opportunities');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
-    }
-    return INITIAL_OPPORTUNITIES;
-  });
-
+  const [opportunities, setOpportunities] = useState<RegulatoryOpportunity[]>(INITIAL_OPPORTUNITIES);
   const [teamMembers] = useState<SpiTeamMember[]>(INITIAL_SPI_TEAM);
   const [dailyDigest, setDailyDigest] = useState<DailyDigest>(INITIAL_DAILY_DIGEST);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
-  // Estados de Modales
+  // Estados de Modales (ambos inician en null/false)
   const [selectedOpportunity, setSelectedOpportunity] = useState<RegulatoryOpportunity | null>(null);
   const [opportunityToAssign, setOpportunityToAssign] = useState<RegulatoryOpportunity | null>(null);
   const [isDigestOpen, setIsDigestOpen] = useState(false);
@@ -49,53 +47,71 @@ export function App() {
   const [selectedType, setSelectedType] = useState<OpportunityType | 'ALL'>('ALL');
   const [selectedUrgency, setSelectedUrgency] = useState<UrgencyLevel | 'ALL'>('ALL');
 
-  // Guardar en localStorage ante cambios
-  const updateOpportunities = (updated: RegulatoryOpportunity[]) => {
-    setOpportunities(updated);
-    localStorage.setItem('spi_opportunities', JSON.stringify(updated));
-  };
+  // Conexión en tiempo real a Cloud Firestore
+  useEffect(() => {
+    const unsubOpps = subscribeToOpportunities((liveOpps) => {
+      if (liveOpps && liveOpps.length > 0) {
+        setOpportunities(liveOpps);
+        setIsLiveConnected(true);
+      }
+    });
 
-  // Asignar oportunidad o cambiar estado
-  const handleSaveAssignment = (
+    const unsubDigest = subscribeToLatestDigest((liveDigest) => {
+      if (liveDigest) {
+        setDailyDigest(liveDigest);
+      }
+    });
+
+    return () => {
+      unsubOpps();
+      unsubDigest();
+    };
+  }, []);
+
+  // Asignar oportunidad o cambiar estado (guarda en Firestore y actualiza localmente)
+  const handleSaveAssignment = async (
     opportunityId: string,
     member: SpiTeamMember | null,
     status: OpportunityStatus,
     note?: string
   ) => {
-    const updated = opportunities.map((opp) => {
-      if (opp.id !== opportunityId) return opp;
+    // Actualizar en Cloud Firestore
+    await updateOpportunityInFirestore(opportunityId, member, status, note);
 
-      const newNotes = [...(opp.managementNotes || [])];
-      if (note) {
-        newNotes.push({
-          author: member?.name || 'Equipo SPI',
-          date: new Date().toISOString(),
-          comment: note
-        });
-      }
+    // Actualización optimista local
+    setOpportunities((prev) =>
+      prev.map((opp) => {
+        if (opp.id !== opportunityId) return opp;
 
-      return {
-        ...opp,
-        status,
-        assignedTo: member ? {
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          role: member.role
-        } : undefined,
-        assignedAt: member ? new Date().toISOString() : opp.assignedAt,
-        lastUpdated: new Date().toISOString(),
-        managementNotes: newNotes
-      };
-    });
+        const newNotes = [...(opp.managementNotes || [])];
+        if (note) {
+          newNotes.push({
+            author: member?.name || 'Equipo SPI',
+            date: new Date().toISOString(),
+            comment: note
+          });
+        }
 
-    updateOpportunities(updated);
+        return {
+          ...opp,
+          status,
+          assignedTo: member ? {
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            role: member.role
+          } : undefined,
+          assignedAt: member ? new Date().toISOString() : opp.assignedAt,
+          lastUpdated: new Date().toISOString(),
+          managementNotes: newNotes
+        };
+      })
+    );
   };
 
   // Agregar nuevas oportunidades detectadas por el escáner
   const handleScanCompleted = (newOpps: RegulatoryOpportunity[]) => {
-    const updated = [...newOpps, ...opportunities];
-    updateOpportunities(updated);
+    setOpportunities((prev) => [...newOpps, ...prev]);
   };
 
   // Reset de Filtros
@@ -110,7 +126,6 @@ export function App() {
   // Filtrado reactivo de oportunidades
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter((opp) => {
-      // Filtro de búsqueda
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesTitle = opp.title.toLowerCase().includes(query);
@@ -124,22 +139,18 @@ export function App() {
         }
       }
 
-      // Filtro de país
       if (selectedCountry !== 'ALL' && opp.country !== selectedCountry) {
         return false;
       }
 
-      // Filtro de sector
       if (selectedSector !== 'ALL' && !opp.sectors.includes(selectedSector)) {
         return false;
       }
 
-      // Filtro de tipo de oportunidad
       if (selectedType !== 'ALL' && opp.opportunityType !== selectedType) {
         return false;
       }
 
-      // Filtro de urgencia
       if (selectedUrgency !== 'ALL' && opp.urgency !== selectedUrgency) {
         return false;
       }
@@ -165,6 +176,12 @@ export function App() {
               <span className="text-xs font-bold uppercase tracking-wider text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
                 LatAm Regulatory & IP Intelligence
               </span>
+              {isLiveConnected && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Firestore Live
+                </span>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Radar de Oportunidades & Cumplimiento Normativo
@@ -187,7 +204,7 @@ export function App() {
         {/* Tarjetas de Métricas KPI */}
         <MetricCards opportunities={opportunities} />
 
-        {/* Motor de Escaneo & Análisis con Gemini */}
+        {/* Motor de Escaneo & Análisis con Gemini (Colapsable) */}
         <ScannerSimulator onScanCompleted={handleScanCompleted} />
 
         {/* Barra de Filtros */}
@@ -208,7 +225,7 @@ export function App() {
         {/* Contador de Resultados */}
         <div className="flex items-center justify-between mb-4 text-xs text-slate-500 font-medium px-1">
           <span>Mostrando <strong>{filteredOpportunities.length}</strong> de {opportunities.length} oportunidades identificadas</span>
-          <span className="text-[11px] text-slate-400">Actualizado automáticamente en tiempo real</span>
+          <span className="text-[11px] text-slate-400">Actualizado automáticamente en tiempo real con Cloud Firestore</span>
         </div>
 
         {/* Feed de Oportunidades */}

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RegulatoryOpportunity, OpportunityStatus, SpiTeamMember } from '../types';
-import { X, UserCheck, Send, Check } from 'lucide-react';
+import { X, UserCheck, Check } from 'lucide-react';
 
 interface AssignmentModalProps {
   opportunity: RegulatoryOpportunity | null;
@@ -20,13 +20,34 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
   onClose,
   onSave
 }) => {
-  if (!opportunity) return null;
-
-  const [selectedMemberId, setSelectedMemberId] = useState<string>(
-    opportunity.assignedTo?.id || ''
-  );
-  const [status, setStatus] = useState<OpportunityStatus>(opportunity.status);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [status, setStatus] = useState<OpportunityStatus>('nueva');
   const [note, setNote] = useState<string>('');
+
+  useEffect(() => {
+    if (opportunity) {
+      setSelectedMemberId(opportunity.assignedTo?.id || '');
+      setStatus(opportunity.status);
+      setNote('');
+    }
+  }, [opportunity]);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (opportunity) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'auto';
+    };
+  }, [opportunity, onClose]);
+
+  if (!opportunity) return null;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +57,14 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-sky-600" />
@@ -48,6 +75,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full"
+            title="Cerrar (Esc)"
           >
             <X className="w-5 h-5" />
           </button>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DailyDigest } from '../types';
-import { X, Mail, Copy, Check, Download, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
+import { X, Mail, Copy, Check, Download, Sparkles, ShieldCheck } from 'lucide-react';
 import { CountryBadge } from './CountryBadge';
 
 interface DailyDigestModalProps {
@@ -10,6 +10,21 @@ interface DailyDigestModalProps {
 
 export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onClose }) => {
   const [copied, setCopied] = useState(false);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (digest) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'auto';
+    };
+  }, [digest, onClose]);
 
   if (!digest) return null;
 
@@ -30,8 +45,14 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-6 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -55,9 +76,11 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ digest, onCl
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-full transition-colors"
+            className="p-1.5 text-slate-400 hover:text-white rounded-full transition-colors flex-shrink-0"
+            title="Cerrar (Esc)"
+            aria-label="Cerrar modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 

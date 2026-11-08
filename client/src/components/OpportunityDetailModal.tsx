@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { RegulatoryOpportunity } from '../types';
 import { CountryBadge } from './CountryBadge';
-import { X, ExternalLink, Calendar, Clock, Sparkles, ShieldAlert, Quote, UserCheck, CheckCircle, FileText, Send } from 'lucide-react';
+import { X, ExternalLink, Calendar, Clock, Sparkles, ShieldAlert, Quote, UserCheck, FileText } from 'lucide-react';
 
 interface OpportunityDetailModalProps {
   opportunity: RegulatoryOpportunity | null;
@@ -14,16 +14,37 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
   onClose,
   onAssign
 }) => {
+  // Cerrar con la tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (opportunity) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'auto';
+    };
+  }, [opportunity, onClose]);
+
   if (!opportunity) return null;
 
   const isCommercial = opportunity.opportunityType === 'commercial_opportunity';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header Modal */}
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex items-start justify-between gap-4">
-          <div className="space-y-2">
+        <div className="p-6 border-b border-slate-200 bg-slate-50/80 flex items-start justify-between gap-4">
+          <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <CountryBadge country={opportunity.country} />
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800">
@@ -52,9 +73,11 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0"
+            title="Cerrar (Esc)"
+            aria-label="Cerrar modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
