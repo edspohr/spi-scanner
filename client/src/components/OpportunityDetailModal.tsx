@@ -138,9 +138,12 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
           {/* Plan de Acción Estratégico SPI */}
           <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl shadow-md space-y-4">
             <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-              <h4 className="text-sm font-bold flex items-center gap-2 text-white">
-                <Sparkles className="w-4 h-4 text-amber-400" /> Estrategia de Negocio para SPI Américas
-              </h4>
+              <div className="flex items-center gap-3">
+                <img src="/spi-logo-white.png" alt="SPI Américas" className="h-5 w-auto object-contain opacity-95" />
+                <h4 className="text-sm font-bold flex items-center gap-2 text-white">
+                  <Sparkles className="w-4 h-4 text-amber-400" /> Estrategia de Negocio para SPI Américas
+                </h4>
+              </div>
               {opportunity.spiActionPlan.recommendedServiceOffering && (
                 <span className="text-xs bg-amber-400 text-slate-950 font-bold px-2.5 py-1 rounded-full">
                   {opportunity.spiActionPlan.recommendedServiceOffering}

@@ -55,13 +55,15 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ isOpen, dige
         className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header con Logo Blanco SPI */}
         <div className="p-6 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-400 border border-sky-400/30">
-              <Mail className="w-5 h-5" />
-            </div>
-            <div>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/spi-logo-white.png" 
+              alt="SPI Américas" 
+              className="h-8 w-auto object-contain flex-shrink-0" 
+            />
+            <div className="border-l border-slate-700 pl-3.5">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white">
                   Reporte Diario Ejecutivo de Novedades

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Globe, Shield, RefreshCw } from 'lucide-react';
+import { Mail, Globe } from 'lucide-react';
 
 interface NavbarProps {
   onOpenDigest: () => void;
@@ -15,30 +15,34 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Branding SPI */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-sky-500/20">
-            SPI
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold tracking-tight text-white text-base">
-                SPI AMÉRICAS
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                Regulatory Radar
-              </span>
+        {/* Branding Oficial SPI Américas con Logo Blanco */}
+        <div className="flex items-center gap-4">
+          <a href="/" className="flex items-center gap-3.5 group">
+            <img 
+              src="/spi-logo-white.png" 
+              alt="SPI Américas" 
+              className="h-8 sm:h-9 w-auto object-contain hover:opacity-90 transition-opacity" 
+            />
+            <div className="border-l border-slate-700/80 pl-3.5">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold tracking-tight text-white text-sm sm:text-base">
+                  AMÉRICAS
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  Regulatory Radar
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium hidden sm:block leading-tight">
+                Vigilancia Regulatoria & Propiedad Intelectual LatAm
+              </p>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">
-              Vigilancia Regulatoria & Propiedad Intelectual LatAm
-            </p>
-          </div>
+          </a>
         </div>
 
         {/* Estatus & Acciones */}
         <div className="flex items-center gap-3">
           {/* Indicador de Cobertura */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
             <Globe className="w-3.5 h-3.5 text-sky-400" />
             <span>CO • MX • BR • AR • CL • PE</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1" />

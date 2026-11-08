@@ -259,6 +259,21 @@ export function App() {
         )}
       </main>
 
+      {/* Footer Oficial SPI Américas */}
+      <footer className="mt-16 border-t border-slate-200 bg-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <img src="/spi-logo-blue.png" alt="SPI Américas" className="h-7 w-auto object-contain" />
+            <span className="text-xs text-slate-500 font-medium sm:border-l sm:border-slate-200 sm:pl-3">
+              Consultoría Regulatoria & Propiedad Intelectual en América Latina
+            </span>
+          </div>
+          <div className="text-xs text-slate-400">
+            © {new Date().getFullYear()} SPI Américas. Monitoreo oficial CO • MX • BR • AR • CL • PE
+          </div>
+        </div>
+      </footer>
+
       {/* Modal de Detalle Completo con Citas Legales */}
       <OpportunityDetailModal
         opportunity={selectedOpportunity}
