@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "regulatory_opportunities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country", "order": "ASCENDING" },
+        { "fieldPath": "publicationDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "regulatory_opportunities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "urgency", "order": "ASCENDING" },
+        { "fieldPath": "publicationDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "regulatory_opportunities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "opportunityType", "order": "ASCENDING" },
+        { "fieldPath": "publicationDate", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
