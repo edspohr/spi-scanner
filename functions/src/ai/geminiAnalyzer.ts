@@ -1,7 +1,7 @@
 import { VertexAI, SchemaType } from '@google-cloud/vertexai';
 import { RawRegulatoryDocument, RegulatoryOpportunity, UrgencyLevel, OpportunityType } from '../sources/types';
 
-const PROJECT_ID = process.env.GCP_PROJECT || process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG || '{}').projectId : 'spi-regulatory-scanner';
+const PROJECT_ID = process.env.GCP_PROJECT || process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG || '{}').projectId : 'spi-scanner';
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1';
 
 // Inicialización de Vertex AI
@@ -10,7 +10,7 @@ let vertexAIClient: VertexAI | null = null;
 function getVertexAI(): VertexAI {
   if (!vertexAIClient) {
     vertexAIClient = new VertexAI({
-      project: PROJECT_ID || 'spi-regulatory-scanner',
+      project: PROJECT_ID || 'spi-scanner',
       location: LOCATION,
     });
   }
