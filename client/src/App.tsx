@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { User } from 'firebase/auth';
 import { 
   RegulatoryOpportunity, 
   CountryCode, 
@@ -19,6 +20,7 @@ import {
   subscribeToLatestDigest, 
   updateOpportunityInFirestore 
 } from './services/firestoreService';
+import { AuthGuard } from './components/AuthGuard';
 import { Navbar } from './components/Navbar';
 import { MetricCards } from './components/MetricCards';
 import { FilterBar } from './components/FilterBar';
@@ -29,7 +31,8 @@ import { DailyDigestModal } from './components/DailyDigestModal';
 import { ScannerSimulator } from './components/ScannerSimulator';
 import { SlidersHorizontal, Cloud } from 'lucide-react';
 
-export function App() {
+// AppContent recibe el usuario autenticado desde AuthGuard
+function AppContent({ user }: { user: User }) {
   const [opportunities, setOpportunities] = useState<RegulatoryOpportunity[]>(INITIAL_OPPORTUNITIES);
   const [teamMembers] = useState<SpiTeamMember[]>(INITIAL_SPI_TEAM);
   const [dailyDigest, setDailyDigest] = useState<DailyDigest>(INITIAL_DAILY_DIGEST);
@@ -166,6 +169,7 @@ export function App() {
         onOpenDigest={() => setIsDigestOpen(true)}
         hasCriticalUpdates={dailyDigest.hasCriticalUpdates}
         totalOpportunities={opportunities.length}
+        user={user}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -296,6 +300,15 @@ export function App() {
         onClose={() => setIsDigestOpen(false)}
       />
     </div>
+  );
+}
+
+// App es el punto de entrada — envuelve AppContent con AuthGuard
+export function App() {
+  return (
+    <AuthGuard>
+      {(user) => <AppContent user={user} />}
+    </AuthGuard>
   );
 }
 

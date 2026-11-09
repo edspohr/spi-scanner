@@ -1,22 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite lectura y escritura a miembros autenticados del equipo SPI
+
+    // ─── Función helper ────────────────────────────────────────────────────────
+    // Verifica que el usuario esté autenticado con cuenta @spiamericas.com
+    function isSpiMember() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.matches('.*@spiamericas\\.com$')
+        && request.auth.token.email_verified == true;
+    }
+
+    // ─── Oportunidades regulatorias ────────────────────────────────────────────
     match /regulatory_opportunities/{opportunityId} {
-      allow read: if true;
-      allow write: if true; // En producción: if request.auth != null;
+      allow read: if isSpiMember();
+      allow write: if isSpiMember();
     }
+
+    // ─── Fuentes oficiales (catálogo de agencias) ──────────────────────────────
     match /official_sources/{sourceId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isSpiMember();
+      allow write: if isSpiMember();
     }
+
+    // ─── Miembros del equipo SPI ───────────────────────────────────────────────
     match /team_members/{memberId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isSpiMember();
+      allow write: if isSpiMember();
     }
+
+    // ─── Digest ejecutivo diario ───────────────────────────────────────────────
     match /daily_digests/{digestId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isSpiMember();
+      // Solo Cloud Functions (admin SDK) pueden escribir; el cliente solo lee
+      allow write: if false;
     }
   }
 }
