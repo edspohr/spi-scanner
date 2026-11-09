@@ -35,5 +35,10 @@ service cloud.firestore {
       // Solo Cloud Functions (admin SDK) pueden escribir; el cliente solo lee
       allow write: if false;
     }
+    // ─── Registro de deduplicación (solo Cloud Functions Admin SDK escribe) ────
+    match /processed_documents/{docHash} {
+      allow read: if isSpiMember();
+      allow write: if false; // Solo Cloud Functions Admin SDK
+    }
   }
 }

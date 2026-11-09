@@ -4,7 +4,8 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { OFFICIAL_SOURCES_REGISTRY } from './sources/registry';
 import { analyzeRegulatoryDocument } from './ai/geminiAnalyzer';
 import { generateDailyExecutiveDigest } from './ai/dailyDigest';
-import { RegulatoryOpportunity, RawRegulatoryDocument, OpportunityStatus } from './sources/types';
+import { runFullScan } from './sources/scanner';
+import { RegulatoryOpportunity, RawRegulatoryDocument, OpportunityStatus, CountryCode } from './sources/types';
 
 // Inicializar Firebase Admin
 if (!admin.apps.length) {
@@ -19,12 +20,19 @@ const db = admin.firestore();
 export const scheduledDailyScanner = onSchedule({
   schedule: '0 6 * * *',
   timeZone: 'America/Bogota',
-  memory: '512MiB',
-  timeoutSeconds: 300,
+  memory: '1GiB',
+  timeoutSeconds: 540, // 9 minutos — máximo para Cloud Functions 2nd gen
 }, async (_event) => {
   console.log('Iniciando escaneo normativo diario automático para SPI Américas...');
-  
-  // Obtener oportunidades de las últimas 24 horas y generar digest
+
+  // 1. Escaneo real de todas las fuentes activas
+  const scanResult = await runFullScan({
+    maxItemsPerSource: 10,
+  });
+
+  console.log(`Escaneo diario completado. Nuevas oportunidades: ${scanResult.opportunitiesFound}`);
+
+  // 2. Generar digest con TODAS las oportunidades recientes (últimas 24h)
   const snapshot = await db.collection('regulatory_opportunities')
     .where('publicationDate', '>=', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0])
     .get();
@@ -33,28 +41,40 @@ export const scheduledDailyScanner = onSchedule({
   const digest = await generateDailyExecutiveDigest(opps);
 
   await db.collection('daily_digests').doc(digest.id).set(digest);
-  console.log(`Digest diario guardado con éxito. ID: ${digest.id}, Relevantes: ${digest.relevantCount}`);
+  console.log(`Digest diario guardado. ID: ${digest.id}, Relevantes: ${digest.relevantCount}`);
 });
 
 /**
- * 2. Endpoint Callable: Disparar Escaneo Manual / Simulado
+ * 2. Endpoint Callable: Disparar Escaneo Manual con scrapers reales
  */
 export const triggerManualScan = onCall({
   cors: true,
-  memory: '512MiB',
-  timeoutSeconds: 300,
+  memory: '1GiB',
+  timeoutSeconds: 540,
 }, async (request) => {
-  const countryFilter = request.data?.country;
+  const countryFilter = request.data?.country as CountryCode | undefined;
+  const maxItemsPerSource = request.data?.maxItemsPerSource ?? 5;
+
   console.log(`Disparando escaneo manual. Filtro país: ${countryFilter || 'TODOS'}`);
 
-  const sources = countryFilter 
-    ? OFFICIAL_SOURCES_REGISTRY.filter(s => s.country === countryFilter)
-    : OFFICIAL_SOURCES_REGISTRY;
+  const scanResult = await runFullScan({
+    countryFilter,
+    maxItemsPerSource,
+    // En escaneo manual limitamos fuentes para no agotar timeout
+    maxSources: countryFilter ? undefined : 6,
+  });
 
   return {
     success: true,
-    sourcesChecked: sources.length,
-    timestamp: new Date().toISOString()
+    sourcesAttempted: scanResult.sourcesAttempted,
+    sourcesSucceeded: scanResult.sourcesSucceeded,
+    sourcesFailed: scanResult.sourcesFailed,
+    documentsFound: scanResult.documentsFound,
+    documentsSkipped: scanResult.documentsSkipped,
+    opportunitiesFound: scanResult.opportunitiesFound,
+    errors: scanResult.errors,
+    newOpportunities: scanResult.newOpportunities,
+    timestamp: new Date().toISOString(),
   };
 });
 
