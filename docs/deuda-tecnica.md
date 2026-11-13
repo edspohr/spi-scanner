@@ -1,0 +1,18 @@
+# Deuda técnica
+
+Alta implica riesgo de seguridad, integridad o bloqueo operativo. Media implica impacto recurrente o costo de mantenimiento. Baja corresponde a mejoras acotadas. Estados: abierta, mitigada y resuelta. Los responsables son roles pendientes de asignación nominal; no se atribuyen compromisos a personas sin acuerdo.
+
+| ID | Problema e impacto | Prioridad | Estado | Responsable o issue | Condición de cierre y evidencia |
+| --- | --- | --- | --- | --- | --- |
+| DEBT-001 | Históricamente faltaba autenticación; actualmente hay dominios verificados, pero no RBAC por rol ni validación granular de campos en todas las escrituras de oportunidades/equipo. | Alta | mitigada | Mantenimiento técnico + SPI | Matriz de permisos acordada y pruebas de reglas para mutaciones por campo/rol. Mitigación: `firestore.rules`, `auth.ts`, suite de emulador y ADR-0005. |
+| DEBT-002 | PDFs sin texto y portales dinámicos/bloqueados dejan fuentes sin extracción. | Alta | abierta | Mantenimiento de ingesta | Conectores/OCR comprobados con fixtures y diagnóstico reproducible por fuente. Evidencia: diagnóstico del 13-11-2026 y `health`. |
+| DEBT-004 | Límite 15 MB / 20 páginas / 30.000 caracteres; documentos largos pueden rechazarse o revisarse parcialmente. | Alta | abierta | Mantenimiento de ingesta + SPI | Procesamiento por partes con cobertura explícita de páginas/secciones y pruebas de límites y contenido. |
+| DEBT-006 | Evaluaciones actuales prueban contratos y citas, pero no calidad semántica real de clasificación, fechas ni recomendaciones. | Alta | mitigada | SPI + mantenimiento de IA | Corpus sintético revisado por expertos, métricas y umbrales versionados, y ejecuciones reales separadas de CI. Mitigación: `test/ai-evaluation.test.cjs`. |
+| DEBT-007 | Escaneo secuencial con presupuesto de tiempo puede dejar fuentes pendientes; una ejecución observada alcanzó el límite tras consultar 12 de 16. | Alta | abierta | Mantenimiento de ingesta | Planificación por tareas con reanudación justa y prueba que cubra todas las fuentes bajo límites reales, sin perder deduplicación. |
+| DEBT-008 | Deduplicación por URL/fuente no detecta cambios publicados en la misma URL. | Media | abierta | Mantenimiento de ingesta | Hash/versionado de contenido con política de reanálisis y pruebas de actualización de documentos. |
+| DEBT-009 | SDK Vertex AI legado y dependencias con actualizaciones pendientes. | Media | abierta | Mantenimiento técnico | Migración a SDK soportado, revisión de dependencias y equivalencia de esquema/citas con evaluaciones. |
+| DEBT-010 | Persisten tipos `any` en límites de integración y componentes; ESLint los tolera explícitamente mientras TypeScript estricto y las demás reglas se exigen. | Media | abierta | Mantenimiento técnico | Tipar límites con validación de entrada y habilitar `no-explicit-any` sin supresiones globales. |
+| DEBT-011 | No existe staging separado ni prueba automatizada del login Google real; revisión visual depende del navegador disponible. | Media | abierta | Operación + SPI | Proyecto de staging, flujos completos de login/gestión y evidencia visual reproducible sin escribir producción. |
+| DEBT-012 | Herramientas administrativas históricas incluyen acciones de producción sin dry-run; restauración de sus respaldos aún no está ensayada automáticamente. | Media | abierta | Operación | Parámetros de destino, ensayo en emulador/staging y prueba de recuperación de datos. Procedimiento vigente: runbook. |
+
+DEBT-003 (correo automático) y DEBT-005 (matching con cartera) se trasladaron al [backlog](backlog.md): son capacidades de producto pendientes, no controles ya implementados. No se consideran resueltas.

@@ -1,187 +1,68 @@
 import React from 'react';
 import { RegulatoryOpportunity } from '../types';
 import { CountryBadge } from './CountryBadge';
-import { Clock, Calendar, ArrowRight, UserCheck, ShieldAlert, Sparkles, ExternalLink } from 'lucide-react';
+import { CalendarDays, Clock3, ArrowUpRight, UserRoundPlus, ChevronRight } from 'lucide-react';
+import { getPracticeArea } from '../utils/opportunityAreas';
+import { AREA_THEMES } from '../utils/areaThemes';
+import { getNextDeadline } from '../utils/opportunityPriorities';
 
 interface OpportunityCardProps {
   opportunity: RegulatoryOpportunity;
   onSelect: (opportunity: RegulatoryOpportunity) => void;
   onAssign: (opportunity: RegulatoryOpportunity) => void;
 }
-
-const URGENCY_STYLES: Record<string, { label: string; badge: string; border: string; dot: string }> = {
-  critical: {
-    label: 'Crítica (< 30 días)',
-    badge: 'bg-rose-50 text-rose-700 border-rose-200',
-    border: 'border-l-4 border-l-rose-500',
-    dot: 'bg-rose-500'
-  },
-  high: {
-    label: 'Alta (30 - 90 días)',
-    badge: 'bg-amber-50 text-amber-700 border-amber-200',
-    border: 'border-l-4 border-l-amber-500',
-    dot: 'bg-amber-500'
-  },
-  medium: {
-    label: 'Media (90+ días)',
-    badge: 'bg-blue-50 text-blue-700 border-blue-200',
-    border: 'border-l-4 border-l-blue-400',
-    dot: 'bg-blue-400'
-  },
-  low: {
-    label: 'Baja / Informativa',
-    badge: 'bg-slate-50 text-slate-700 border-slate-200',
-    border: 'border-l-4 border-l-slate-300',
-    dot: 'bg-slate-400'
-  }
+const URGENCY: Record<string, {label:string;badge:string}> = {
+  critical:{label:'Crítica',badge:'bg-rose-50 text-rose-700 ring-rose-100'},
+  high:{label:'Alta',badge:'bg-amber-50 text-amber-700 ring-amber-100'},
+  medium:{label:'Media',badge:'bg-slate-100 text-slate-500 ring-slate-100'},
+  low:{label:'Baja',badge:'bg-slate-50 text-slate-400 ring-slate-100'}
 };
+const STATUS: Record<string,string> = {nueva:'Nueva',en_evaluacion:'En evaluación',asignada:'Asignada',contactando_clientes:'Contactando clientes',cerrada:'Cerrada'};
+const INDUSTRIES: Record<string,string> = {pharma:'Farma',medical_devices:'Dispositivos',food_beverages:'Alimentos',cosmetics_hygiene:'Cosméticos',supplements:'Suplementos'};
+const formatDate=(value:string)=>value.split('-').reverse().join('/');
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  nueva: { label: 'Nueva', color: 'bg-emerald-100 text-emerald-800' },
-  en_evaluacion: { label: 'En Evaluación', color: 'bg-amber-100 text-amber-800' },
-  asignada: { label: 'Asignada', color: 'bg-sky-100 text-sky-800' },
-  contactando_clientes: { label: 'Contactando Clientes', color: 'bg-purple-100 text-purple-800' },
-  cerrada: { label: 'Cerrada', color: 'bg-slate-100 text-slate-700' }
-};
-
-const SECTOR_LABELS: Record<string, string> = {
-  pharma: 'Farma',
-  medical_devices: 'Dispositivos Médicos',
-  food_beverages: 'Alimentos',
-  cosmetics_hygiene: 'Cosméticos',
-  supplements: 'Suplementos',
-  intellectual_property: 'Propiedad Intelectual'
-};
-
-export const OpportunityCard: React.FC<OpportunityCardProps> = ({
-  opportunity,
-  onSelect,
-  onAssign
-}) => {
-  const urgency = URGENCY_STYLES[opportunity.urgency] || URGENCY_STYLES.medium;
-  const statusInfo = STATUS_CONFIG[opportunity.status] || STATUS_CONFIG.nueva;
-  const isCommercial = opportunity.opportunityType === 'commercial_opportunity';
-
-  return (
-    <div className={`bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all ${urgency.border} flex flex-col justify-between overflow-hidden group`}>
-      <div className="p-5">
-        {/* Encabezado: País, Entidad, Tipo de Oportunidad y Urgencia */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <CountryBadge country={opportunity.country} />
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {opportunity.entityName}
-            </span>
-            {opportunity.documentNumber && (
-              <span className="text-xs text-slate-500 font-mono">
-                {opportunity.documentNumber}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Badge Tipo: Oportunidad Comercial vs Cumplimiento */}
-            {isCommercial ? (
-              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Venta de Servicios
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                <ShieldAlert className="w-3.5 h-3.5 text-indigo-600" /> Cumplimiento Mandatorio
-              </span>
-            )}
-
-            {/* Urgencia */}
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md border ${urgency.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${urgency.dot}`} />
-              {urgency.label}
-            </span>
-          </div>
-        </div>
-
-        {/* Título de la Normativa / Oportunidad */}
-        <h3 
-          onClick={() => onSelect(opportunity)}
-          className="text-base font-bold text-slate-900 group-hover:text-sky-700 transition-colors cursor-pointer line-clamp-2 leading-snug"
-        >
-          {opportunity.title}
-        </h3>
-
-        {/* Resumen Ejecutivo */}
-        <p className="mt-2.5 text-xs text-slate-600 line-clamp-3 leading-relaxed">
-          {opportunity.executiveSummary}
-        </p>
-
-        {/* Caja de Acción Rápida para SPI */}
-        <div className="mt-3.5 p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1.5 text-xs">
-          <div className="flex items-start gap-1.5">
-            <span className="font-semibold text-slate-700 whitespace-nowrap">📋 Necesidad Cliente:</span>
-            <span className="text-slate-600 line-clamp-1">{opportunity.spiActionPlan.whatClientsNeedToDo}</span>
-          </div>
-          <div className="flex items-start gap-1.5">
-            <span className="font-semibold text-emerald-700 whitespace-nowrap">💼 Oportunidad SPI:</span>
-            <span className="text-emerald-900 font-medium line-clamp-1">{opportunity.spiActionPlan.howSpiCanHelp}</span>
-          </div>
-        </div>
-
-        {/* Sectores afectados */}
-        <div className="mt-3 flex flex-wrap gap-1">
-          {opportunity.sectors.map((s) => (
-            <span key={s} className="text-[11px] font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-              {SECTOR_LABELS[s] || s}
-            </span>
-          ))}
-        </div>
+export const OpportunityCard: React.FC<OpportunityCardProps> = ({opportunity,onSelect,onAssign}) => {
+  const urgency=URGENCY[opportunity.urgency] || URGENCY.medium;
+  const theme=AREA_THEMES[getPracticeArea(opportunity)];
+  const industries=opportunity.sectors.filter(sector=>sector !== 'intellectual_property');
+  const deadline=getNextDeadline(opportunity);
+  const open=opportunity.status !== 'cerrada';
+  const overdue=!!deadline && deadline.daysRemaining < 0 && open;
+  const soon=!!deadline && deadline.daysRemaining >= 0 && deadline.daysRemaining <= 30 && open;
+  const action=opportunity.spiActionPlan.howSpiCanHelp?.trim();
+  const owner=opportunity.assignedTo?.name;
+  const initials=owner?.split(' ').filter(Boolean).slice(0,2).map(word=>word[0]).join('');
+  const deadlineTone=overdue?'text-rose-700':soon?'text-amber-700':'text-slate-700';
+  return <article className={`group min-w-0 overflow-hidden bg-white rounded-2xl shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200/60 hover:shadow-md transition-all duration-150 ${theme.card}`}>
+    <div className="p-3.5 pb-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className={`text-[10px] font-semibold uppercase tracking-[0.1em] ${theme.muted}`}>{opportunity.opportunityType === 'commercial_opportunity'?'Oportunidad comercial':'Cumplimiento'}</span>
+        <div className="flex items-center gap-2"><span className="text-[10px] text-slate-400">{STATUS[opportunity.status] || opportunity.status}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${urgency.badge}`}>{urgency.label}</span></div>
       </div>
-
-      {/* Pie de Tarjeta: Fechas, Asignado y Botones de Acción */}
-      <div className="bg-slate-50/70 border-t border-slate-100 px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-4 text-slate-500">
-          <div className="flex items-center gap-1" title="Fecha de publicación oficial">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span>{opportunity.publicationDate}</span>
-          </div>
-
-          {opportunity.transitionalDeadline && (
-            <div className="flex items-center gap-1 text-rose-600 font-semibold" title="Fecha límite de transición">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Plazo: {opportunity.transitionalDeadline}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Responsable SPI y Botones */}
-        <div className="flex items-center gap-2">
-          {opportunity.assignedTo ? (
-            <button
-              onClick={() => onAssign(opportunity)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 hover:border-sky-400 transition-colors"
-              title="Reasignar o cambiar estatus"
-            >
-              <UserCheck className="w-3.5 h-3.5 text-sky-600" />
-              <span className="font-medium max-w-[120px] truncate">{opportunity.assignedTo.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${statusInfo.color}`}>
-                {statusInfo.label}
-              </span>
-            </button>
-          ) : (
-            <button
-              onClick={() => onAssign(opportunity)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-800 font-medium hover:bg-amber-100 transition-colors"
-            >
-              <span>👤 Asignar a SPI</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => onSelect(opportunity)}
-            className="inline-flex items-center gap-1 px-3 py-1 bg-sky-600 text-white rounded-md font-semibold hover:bg-sky-700 transition-colors shadow-sm"
-          >
-            <span>Ver Detalle</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+      <h3><button onClick={()=>onSelect(opportunity)} className={`w-full text-left text-[15px] font-semibold text-slate-900 leading-[1.4] tracking-[-0.01em] line-clamp-2 hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-sm`} title={opportunity.title}>{opportunity.title}</button></h3>
+      <div className={`mt-3 rounded-xl px-3 py-2.5 ${theme.soft}`}>
+        <p className={`text-[9px] uppercase tracking-[0.12em] font-bold mb-1 ${theme.muted}`}>Qué debe hacer SPI</p>
+        <p className={`text-xs leading-[1.5] line-clamp-2 ${theme.text}`} title={action}>{action || 'Acción por definir.'}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        <button onClick={()=>onAssign(opportunity)} className="min-w-0 text-left rounded-lg group/owner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" title="Asignar responsable o cambiar estado" aria-label={`Gestionar responsable de ${opportunity.title}`}>
+          <span className="block text-[9px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Responsable</span>
+          <span className="flex items-center gap-1.5 min-w-0"><span className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold ${owner ? `${theme.count}` : 'bg-slate-100 text-slate-400'}`}>{owner?initials:<UserRoundPlus className="h-3 w-3" />}</span><span className={`truncate text-xs font-semibold ${owner?'text-slate-700':theme.muted}`}>{owner || 'Asignar responsable'}</span><ChevronRight className="h-3 w-3 shrink-0 text-slate-300 group-hover/owner:text-slate-600" /></span>
+        </button>
+        <div className="min-w-0" title={deadline ? `Plazo de ${deadline.label.toLowerCase()}` : 'No hay una fecha de plazo informada'}>
+          <p className="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mb-1">{overdue?'Plazo vencido':!open?'Plazo registrado':'Próximo plazo'}</p>
+          <p className={`flex items-center gap-1.5 text-xs font-semibold min-h-[24px] ${deadline?deadlineTone:'text-slate-400 font-normal'}`}><Clock3 className="h-3.5 w-3.5 shrink-0" />{deadline?formatDate(deadline.date):'Sin plazo informado'}{deadline?.daysRemaining === 0 && open && <span className="text-[9px]">Hoy</span>}</p>
         </div>
       </div>
     </div>
-  );
+    <div className="flex items-center justify-between gap-2 px-4 py-2 bg-slate-50/60 text-[10px]">
+      <div className="min-w-0 flex items-center flex-wrap gap-x-2 gap-y-0.5 text-slate-400">
+        <CountryBadge country={opportunity.country} muted />
+        <span className="truncate max-w-[140px]" title={opportunity.entityName}>{opportunity.entityName}</span>
+        {opportunity.publicationDate && <span className="inline-flex items-center gap-1" title="Fecha de publicación"><CalendarDays className="h-3 w-3" />{opportunity.publicationDate}</span>}
+        {!!industries.length && <span className="truncate max-w-[130px]" title={industries.map(sector=>INDUSTRIES[sector] || sector).join(', ')}>{INDUSTRIES[industries[0]] || industries[0]}{industries.length>1?` +${industries.length-1}`:''}</span>}
+      </div>
+      <button onClick={()=>onSelect(opportunity)} className={`shrink-0 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${theme.button}`} aria-label={`Ver análisis de ${opportunity.title}`}>Detalle<ArrowUpRight className="w-3 h-3" /></button>
+    </div>
+  </article>;
 };

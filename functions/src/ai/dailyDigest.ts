@@ -1,12 +1,12 @@
 import { VertexAI } from '@google-cloud/vertexai';
 import { DailyDigest, RegulatoryOpportunity } from '../sources/types';
 
-const PROJECT_ID = process.env.GCP_PROJECT || process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG || '{}').projectId : 'spi-scanner';
-const LOCATION = process.env.VERTEX_LOCATION || 'us-central1';
+import { PROJECT_ID, LOCATION, MODEL } from './config';
 
 export async function generateDailyExecutiveDigest(
   allOpportunities: RegulatoryOpportunity[],
-  dateStr: string = new Date().toISOString().split('T')[0]
+  dateStr: string = new Date().toISOString().split('T')[0],
+  vertex = new VertexAI({ project: PROJECT_ID, location: LOCATION, apiEndpoint: LOCATION === 'global' ? 'aiplatform.googleapis.com' : undefined })
 ): Promise<DailyDigest> {
   // Filtrar estrictamente solo novedades de alta relevancia (critical o high)
   const highlightedOpps = allOpportunities.filter(
@@ -29,16 +29,15 @@ export async function generateDailyExecutiveDigest(
       criticalCount: 0,
       highCount: 0,
       opportunities: [],
-      executiveBriefingText: `REPORTE DIARIO DE VIGILANCIA REGULATORIA Y PI - SPI AMÉRICAS\nFecha: ${dateStr}\n\nEstatus: Sin novedades críticas reportadas en la jornada.\n\nEl escaneo automático en las fuentes oficiales prioritarias (Colombia, México, Brasil, Argentina, Chile y Perú) no detectó nuevas disposiciones, plazos perentorios o reformas de alto impacto en las últimas 24 horas.\n\nNo se requieren gestiones comerciales ni preventivas extraordinarias el día de hoy.`
+      executiveBriefingText: `REPORTE DIARIO DE VIGILANCIA REGULATORIA Y PI - SPI AMÉRICAS\nFecha: ${dateStr}\n\nEstatus: Sin novedades críticas reportadas en la jornada.\n\nNo hay oportunidades críticas o de urgencia alta entre los hallazgos incluidos. Esta conclusión se limita a los documentos consultados y no acredita cobertura completa de todas las fuentes o países.`
     };
   }
 
   // Generar resumen ejecutivo de alto nivel con Vertex AI Gemini
   let briefingText = '';
   try {
-    const vertex = new VertexAI({ project: PROJECT_ID, location: LOCATION });
     const model = vertex.getGenerativeModel({
-      model: 'gemini-1.5-flash-002',
+      model: MODEL,
       generationConfig: { temperature: 0.2 }
     });
 

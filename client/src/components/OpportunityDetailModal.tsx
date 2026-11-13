@@ -89,7 +89,7 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Publicación Oficial</p>
               <div className="flex items-center gap-1.5 font-bold text-slate-800">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                <span>{opportunity.publicationDate}</span>
+                <span>{opportunity.publicationDate || 'Fecha no informada'}</span>
               </div>
             </div>
 

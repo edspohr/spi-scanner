@@ -1,5 +1,7 @@
 # ADR-0001: Elección del Stack: Firebase y Vertex AI (Gemini)
 
+> Documento histórico: [ADR-0005](0005-mvp-datos-reales-y-acceso.md) reemplaza parcialmente esta decisión y documenta el contrato vigente.
+
 ## Estado
 **Aceptado**
 

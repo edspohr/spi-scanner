@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RegulatoryOpportunity, OpportunityStatus, SpiTeamMember } from '../types';
-import { X, UserCheck, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 
 interface AssignmentModalProps {
   opportunity: RegulatoryOpportunity | null;
@@ -11,7 +11,7 @@ interface AssignmentModalProps {
     member: SpiTeamMember | null,
     status: OpportunityStatus,
     note?: string
-  ) => void;
+  ) => Promise<void>;
 }
 
 export const AssignmentModal: React.FC<AssignmentModalProps> = ({
@@ -22,6 +22,8 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
 }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [status, setStatus] = useState<OpportunityStatus>('nueva');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [note, setNote] = useState<string>('');
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
       setSelectedMemberId(opportunity.assignedTo?.id || '');
       setStatus(opportunity.status);
       setNote('');
+      setError('');
     }
   }, [opportunity]);
 
@@ -49,11 +52,17 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
 
   if (!opportunity) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const member = teamMembers.find((m) => m.id === selectedMemberId) || null;
-    onSave(opportunity.id, member, status, note.trim() || undefined);
-    onClose();
+    setSaving(true);
+    setError('');
+    try {
+      await onSave(opportunity.id, member, status, note.trim() || undefined);
+      onClose();
+    } catch {
+      setError('No se guardaron los cambios. Revisa tu conexión y vuelve a intentar.');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -136,13 +145,14 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             </label>
             <textarea
               rows={3}
-              placeholder="Ej: Se coordinó con Laura para preparar cotizaciones a 5 laboratorios con registros por vencer..."
+              placeholder="Registra la gestión realizada o el próximo paso..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-2 focus:ring-sky-500"
             />
           </div>
 
+          {error && <p role="alert" className="text-rose-700">{error}</p>}
           <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
             <button
               type="button"
@@ -152,11 +162,12 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
               Cancelar
             </button>
             <button
+              disabled={saving}
               type="submit"
               className="px-4 py-2 bg-sky-600 text-white font-bold rounded-lg hover:bg-sky-700 flex items-center gap-1.5 shadow-sm"
             >
               <Check className="w-4 h-4" />
-              <span>Guardar Cambios</span>
+              <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
             </button>
           </div>
         </form>

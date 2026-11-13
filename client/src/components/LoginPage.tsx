@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithGoogle } from '../services/authService';
+import { signInWithGoogle, signInWithPassword, resetPassword, resendVerification, authErrorMessage } from '../services/authService';
 import { Shield, AlertCircle, Loader2 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -7,25 +7,50 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       await signInWithGoogle();
       onLoginSuccess();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión.';
-      setError(message);
+      setError(authErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailAction = async (action: 'login' | 'reset' | 'verify') => {
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+    try {
+      if (action === 'reset') {
+        await resetPassword(email);
+        setNotice('Si existe una cuenta para este correo, recibirás instrucciones para establecer tu contraseña. Revisa también spam.');
+      } else if (action === 'verify') {
+        await resendVerification(email, password);
+        setNotice('Si el correo estaba pendiente de verificación, enviamos un enlace. Revisa tu bandeja y luego vuelve a ingresar.');
+      } else {
+        await signInWithPassword(email, password);
+        onLoginSuccess();
+      }
+    } catch (err: unknown) {
+      setError(authErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
 
       {/* Card central */}
       <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-6">
@@ -54,18 +79,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div className="flex items-start gap-2.5 bg-sky-500/10 border border-sky-500/20 rounded-xl px-4 py-3 w-full">
           <Shield className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
           <p className="text-xs text-sky-300 leading-relaxed">
-            Acceso restringido a cuentas <span className="font-bold text-sky-200">@spiamericas.com</span>.
-            Inicia sesión con tu cuenta de Google corporativa.
+            Acceso restringido a cuentas <span className="font-bold text-sky-200">@spiamericas.com</span> y <span className="font-bold text-sky-200">@spohr.cl</span>.
+            Ingresa con Google o con tu correo y contraseña.
           </p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="flex items-start gap-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 w-full">
+          <div role="alert" className="flex items-start gap-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 w-full">
             <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
             <p className="text-xs text-rose-300 leading-relaxed">{error}</p>
           </div>
         )}
+
+        {notice && <p role="status" className="text-xs text-emerald-300 leading-relaxed">{notice}</p>}
+
+        <form className="w-full flex flex-col gap-3" onSubmit={(event) => { event.preventDefault(); void handleEmailAction('login'); }}>
+          <label htmlFor="email" className="text-xs text-slate-200">Correo electrónico</label>
+          <input id="email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} disabled={loading}
+            placeholder="nombre@spiamericas.com" className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-sm text-white placeholder:text-slate-500" />
+          <label htmlFor="password" className="text-xs text-slate-200">Contraseña</label>
+          <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} disabled={loading}
+            className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-sm text-white" />
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-sky-500 hover:bg-sky-400 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
+            {loading ? 'Procesando...' : 'Ingresar con contraseña'}
+          </button>
+          <div className="flex justify-between gap-3 text-xs text-sky-300">
+            <button type="button" disabled={loading || !email.trim()} onClick={() => void handleEmailAction('reset')} className="hover:underline disabled:opacity-50">Olvidé mi contraseña</button>
+            <button type="button" disabled={loading || !email.trim() || !password} onClick={() => void handleEmailAction('verify')} className="hover:underline disabled:opacity-50">Enviar verificación</button>
+          </div>
+        </form>
 
         {/* Botón Google */}
         <button

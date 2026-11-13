@@ -1,32 +1,17 @@
-# Documentación Técnica & de Negocio — SPI Regulatory Scanner
+# Documentación de SPI Regulatory Scanner
 
-Este directorio contiene la documentación viva del proyecto **SPI Regulatory Scanner & Opportunity Radar**. El objetivo es preservar el contexto de arquitectura, decisiones técnicas (ADRs), modelo de negocio y deuda técnica directamente en el repositorio de código.
+El [README raíz](../README.md) contiene instalación, módulos, comandos de validación y fuentes de verdad.
 
----
+| Documento | Alcance |
+| --- | --- |
+| [Política técnica](politica-tecnica.md) | Estándar compartido para personas, Codex y Claude Code. |
+| [Arquitectura](architecture.md) | Contratos vigentes de datos, acceso, fuentes e IA. |
+| [ADR](adr/README.md) | Decisiones aceptadas, historial y plantilla. |
+| [Deuda técnica](deuda-tecnica.md) | Riesgos verificables, responsables y condiciones de cierre. |
+| [Operación](operacion.md) | Entornos, despliegue, datos, recuperación e incidentes. |
+| [Backlog](backlog.md) | Ideas de producto, separadas de deuda técnica. |
+| [Dominio regulatorio](regulatory-domain.md) | Sectores y taxonomía de negocio. |
+| [Matriz inicial de fuentes](sources-matrix.md) | Referencia de agencias; no sustituye el catálogo vivo de Firestore. |
+| [Diagnóstico de fuentes](source-diagnostics-2026-11-13.md) | Evidencia fechada, no estado en tiempo real. |
 
-## 📚 Índice de Contenidos
-
-| Documento | Descripción |
-| :--- | :--- |
-| **[Arquitectura del Sistema](file:///Users/espohr/dev/spi-regulatory-scanner/docs/architecture.md)** | Diagramas de componentes, flujo de datos, modelo en Firestore y pipeline de Vertex AI. |
-| **[Dominio Regulatorio & Modelo SPI](file:///Users/espohr/dev/spi-regulatory-scanner/docs/regulatory-domain.md)** | Contexto de negocio de SPI Américas, sectores cubiertos, taxonomía de impacto y criterio comercial. |
-| **[Matriz de Fuentes Oficiales LatAm](file:///Users/espohr/dev/spi-regulatory-scanner/docs/sources-matrix.md)** | Inventario de agencias sanitarias, oficinas de PI y diarios oficiales en CO, MX, BR, AR, CL y PE. |
-| **[Registro de Deuda Técnica](file:///Users/espohr/dev/spi-regulatory-scanner/docs/technical-debt.md)** | Registro vivo de deuda técnica, limitaciones actuales, riesgos operativos y plan de mitigación. |
-| **[Architecture Decision Records (ADRs)](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/README.md)** | Registro formal de decisiones de arquitectura tomadas a lo largo de la evolución del proyecto. |
-
----
-
-## 🏛️ Registros de Decisiones de Arquitectura (ADR)
-
-- **[ADR-0001: Adopción de Firebase y Gemini en Vertex AI](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0001-stack-firebase-vertex-ai.md)**
-- **[ADR-0002: Política de "Cero Ruido" en el Reporte Diario](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0002-zero-noise-daily-digest-policy.md)**
-- **[ADR-0003: Taxonomía Dual: Oportunidad Comercial vs. Cumplimiento Mandatorio](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0003-opportunity-radar-crm-taxonomy.md)**
-- **[ADR-0004: Arquitectura Modular para Ingesta de Fuentes Oficiales Heterogéneas](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0004-modular-source-ingestion-and-resilience.md)**
-
----
-
-## 🔄 Convenciones de Mantenimiento
-
-1. **Toda decisión estructural** (nuevo servicio, cambio de base de datos, alteración del modelo de extracción de LLM) debe documentarse mediante un nuevo archivo en `docs/adr/`.
-2. **Cualquier compromiso o solución temporal** tomada para acelerar una entrega debe registrarse inmediatamente en `docs/technical-debt.md` con su impacto estimado y condición de resolución.
-3. **Nuevas fuentes oficiales** incorporadas deben registrarse tanto en `functions/src/sources/registry.ts` como en `docs/sources-matrix.md`.
+Una decisión durable requiere un nuevo ADR. Una limitación técnica comprobada se registra en deuda; una nueva función se registra en backlog. El runbook debe acompañar cambios que afecten la operación. No se actualiza `registry.ts` como requisito para agregar una fuente desde la aplicación: el catálogo vivo es `official_sources` ([ADR-0005](adr/0005-mvp-datos-reales-y-acceso.md)).

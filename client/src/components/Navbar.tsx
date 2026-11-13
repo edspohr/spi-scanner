@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-sky-900/40 transition-all relative"
           >
             <Mail className="w-4 h-4" />
-            <span className="hidden sm:inline">Reporte Diario</span>
+            <span className="hidden sm:inline">Reporte general</span>
             {hasCriticalUpdates && (
               <span className="w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-slate-900 absolute -top-1 -right-1" />
             )}

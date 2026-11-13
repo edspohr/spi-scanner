@@ -1,160 +1,65 @@
-/**
- * scanner.ts
- * Orquestador principal del pipeline de escaneo regulatorio.
- *
- * Flujo por fuente:
- *   1. fetchSourceFeed()      → obtiene items del RSS/Atom/HTML
- *   2. filterAlreadyProcessed() → descarta documentos ya analizados
- *   3. analyzeRegulatoryDocument() → Gemini evalúa relevancia y extrae insights
- *   4. Si isRelevant → guarda en Firestore regulatory_opportunities
- *   5. markAsProcessed()     → registra hash para deduplicación futura
- */
 import * as admin from 'firebase-admin';
-import { OFFICIAL_SOURCES_REGISTRY } from './registry';
-import { OfficialSourceConfig, RegulatoryOpportunity, CountryCode } from './types';
-import { fetchSourceFeed } from './rssFetcher';
+import { getOfficialSources } from './catalog';
+import { RegulatoryOpportunity, CountryCode } from './types';
+import { fetchSourceDocuments } from './rssFetcher';
 import { filterAlreadyProcessed, markAsProcessed } from './deduplicator';
+import { makeSourceHealth } from './health';
 import { analyzeRegulatoryDocument } from '../ai/geminiAnalyzer';
 
-const db = () => admin.firestore();
-
 export interface ScanResult {
-  sourcesAttempted: number;
-  sourcesSucceeded: number;
-  sourcesFailed: number;
-  documentsFound: number;
-  documentsSkipped: number;  // ya procesados
-  documentsAnalyzed: number;
-  opportunitiesFound: number;
+  sourcesAttempted: number; sourcesSucceeded: number; sourcesFailed: number;
+  documentsFound: number; documentsSkipped: number; documentsAnalyzed: number;
+  documentsFailed: number; opportunitiesFound: number;
   errors: Array<{ sourceId: string; error: string }>;
   newOpportunities: RegulatoryOpportunity[];
 }
 
-/**
- * Escanea una fuente individual.
- * Retorna las nuevas oportunidades encontradas.
- */
-async function scanSingleSource(
-  source: OfficialSourceConfig,
-  maxItemsPerSource = 10
-): Promise<{ opportunities: RegulatoryOpportunity[]; skipped: number; failed: boolean }> {
-  try {
-    console.log(`[Scanner] → Escaneando: ${source.id} (${source.country})`);
-    const rawDocs = await fetchSourceFeed(source, maxItemsPerSource);
-
-    if (rawDocs.length === 0) {
-      console.log(`[Scanner]   Sin documentos nuevos en ${source.id}`);
-      return { opportunities: [], skipped: 0, failed: false };
-    }
-
-    // Filtrar ya procesados
-    const docIds = rawDocs.map(d => d.id);
-    const alreadyProcessed = await filterAlreadyProcessed(docIds);
-    const newDocs = rawDocs.filter(d => !alreadyProcessed.has(d.id));
-
-    console.log(`[Scanner]   ${source.id}: ${rawDocs.length} encontrados, ${alreadyProcessed.size} ya procesados, ${newDocs.length} a analizar`);
-
-    const opportunities: RegulatoryOpportunity[] = [];
-
-    for (const doc of newDocs) {
-      try {
-        // Analizar con Gemini
-        const analysis = await analyzeRegulatoryDocument(doc);
-
-        // Marcar como procesado independientemente del resultado
-        await markAsProcessed(doc.id, {
-          sourceId: source.id,
-          title: doc.title,
-          country: doc.country,
-        });
-
-        if (analysis && analysis.isRelevant) {
-          // Guardar en Firestore
-          await db().collection('regulatory_opportunities').doc(analysis.id).set(analysis);
-          opportunities.push(analysis);
-          console.log(`[Scanner]   ✅ Oportunidad guardada: ${analysis.title} [${analysis.urgency}]`);
-        } else {
-          console.log(`[Scanner]   ⚪ No relevante para SPI: ${doc.title}`);
-        }
-
-        // Pausa breve para no saturar la API de Vertex AI
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-      } catch (err) {
-        console.error(`[Scanner]   Error analizando doc ${doc.id}:`, err);
-        // No re-lanzar — continuar con el siguiente documento
-      }
-    }
-
-    return { opportunities, skipped: alreadyProcessed.size, failed: false };
-
-  } catch (err) {
-    console.error(`[Scanner] Error en fuente ${source.id}:`, err);
-    return { opportunities: [], skipped: 0, failed: true };
-  }
-}
-
-/**
- * Escanea múltiples fuentes en secuencia (evita rate limiting).
- * Filtra por país si se especifica.
- */
-export async function runFullScan(options: {
-  countryFilter?: CountryCode;
-  maxItemsPerSource?: number;
-  maxSources?: number;
-}): Promise<ScanResult> {
-  const { countryFilter, maxItemsPerSource = 5, maxSources } = options;
-
-  let sources = OFFICIAL_SOURCES_REGISTRY.filter(s => s.isActive);
-
-  if (countryFilter) {
-    sources = sources.filter(s => s.country === countryFilter);
-  }
-
-  if (maxSources) {
-    sources = sources.slice(0, maxSources);
-  }
-
-  console.log(`[Scanner] Iniciando escaneo completo. Fuentes: ${sources.length}${countryFilter ? ` (filtro: ${countryFilter})` : ''}`);
-
-  const result: ScanResult = {
-    sourcesAttempted: sources.length,
-    sourcesSucceeded: 0,
-    sourcesFailed: 0,
-    documentsFound: 0,
-    documentsSkipped: 0,
-    documentsAnalyzed: 0,
-    opportunitiesFound: 0,
-    errors: [],
-    newOpportunities: [],
-  };
-
+export async function runFullScan(options: { countryFilter?: CountryCode; maxItemsPerSource?: number; maxSources?: number }, analyze = analyzeRegulatoryDocument): Promise<ScanResult> {
+  let sources = (await getOfficialSources()).filter(s => s.isActive && (!options.countryFilter || s.country === options.countryFilter));
+  if (options.maxSources) sources = sources.slice(0, options.maxSources);
+  const result: ScanResult = {sourcesAttempted: sources.length, sourcesSucceeded: 0, sourcesFailed: 0, documentsFound: 0, documentsSkipped: 0, documentsAnalyzed: 0, documentsFailed: 0, opportunitiesFound: 0, errors: [], newOpportunities: []};
+  const deadline = Date.now() + 420000;
   for (const source of sources) {
-    const { opportunities, skipped, failed } = await scanSingleSource(source, maxItemsPerSource);
-
-    if (failed) {
+    if (Date.now() > deadline) {
       result.sourcesFailed++;
-      result.errors.push({ sourceId: source.id, error: 'Fallo al acceder a la fuente' });
-    } else {
-      result.sourcesSucceeded++;
+      result.errors.push({sourceId:source.id, error:'Fuente pendiente: se alcanzó el tiempo máximo del escaneo.'});
+      continue;
     }
-
-    result.documentsSkipped += skipped;
-    result.documentsAnalyzed += opportunities.length;
-    result.opportunitiesFound += opportunities.length;
-    result.newOpportunities.push(...opportunities);
-
-    // Pausa entre fuentes para ser buenos ciudadanos de red
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const {documents,errors} = await fetchSourceDocuments(source, options.maxItemsPerSource ?? 3);
+      await admin.firestore().collection('official_sources').doc(source.id).update({health:makeSourceHealth(source,documents,errors)});
+      if (errors.length) {
+        result.sourcesFailed++;
+        result.errors.push(...errors.map(error=>({sourceId:source.id,error:`${error.url}: ${error.message}`})));
+      } else result.sourcesSucceeded++;
+      result.documentsFound += documents.length;
+      const processed = await filterAlreadyProcessed(documents.map(d => d.id));
+      result.documentsSkipped += processed.size;
+      for (const document of documents.filter(d => !processed.has(d.id))) {
+        try {
+          if (Date.now() > deadline) throw new Error('Se alcanzó el tiempo máximo de análisis.');
+          const analysis = await analyze(document);
+          if (analysis) {
+            // A deterministic ID plus create() preserves assignments on retries.
+            try { await admin.firestore().collection('regulatory_opportunities').doc(analysis.id).create(analysis); }
+            catch (error: any) { if (error.code !== 6) throw error; }
+            result.newOpportunities.push(analysis);
+            result.opportunitiesFound++;
+          }
+          // Failed analyses stay eligible for the next scan.
+          await markAsProcessed(document.id, {sourceId: source.id, title: document.title, country: document.country});
+          result.documentsAnalyzed++;
+        } catch (error) {
+          console.error('Document analysis failed:', document.id, error);
+          result.documentsFailed++;
+          result.errors.push({sourceId: source.id, error: `No se pudo analizar ${document.title}. El documento se reintentará.`});
+        }
+      }
+    } catch (error) {
+      result.sourcesFailed++;
+      try { await admin.firestore().collection('official_sources').doc(source.id).update({health:makeSourceHealth(source,[],[],error)}); } catch (saveError) { console.error('Could not persist source health:',saveError); }
+      result.errors.push({sourceId: source.id, error: error instanceof Error ? error.message : 'Error consultando fuente oficial.'});
+    }
   }
-
-  result.documentsFound = result.documentsSkipped + result.documentsAnalyzed;
-
-  console.log(`[Scanner] Escaneo completado. Resultados:`, {
-    fuentes: `${result.sourcesSucceeded}/${result.sourcesAttempted} OK`,
-    documentos: result.documentsFound,
-    nuevasOportunidades: result.opportunitiesFound,
-  });
-
   return result;
 }

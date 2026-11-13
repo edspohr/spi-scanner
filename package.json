@@ -1,0 +1,30 @@
+{
+  "name": "spi-regulatory-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repository validation for the SPI regulatory and IP radar",
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10 <11"
+  },
+  "packageManager": "npm@10.9.3",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "npm --prefix client run typecheck && npm --prefix functions run typecheck",
+    "test": "npm --prefix client test && npm --prefix functions test",
+    "build": "npm --prefix client run build && npm --prefix functions run build",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-spi-scanner --config firebase.test.json \"node --test test/firestore.rules.test.mjs\"",
+    "eval:ai": "npm --prefix functions run build && node --test test/ai-evaluation.test.cjs",
+    "check:docs": "node scripts/check-doc-links.cjs",
+    "validate": "npm run lint && npm run typecheck && npm test && npm run build && npm run eval:ai && npm run check:docs && npm run test:rules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "eslint": "^10.14.0",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^15.36.0",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.72.2"
+  }
+}

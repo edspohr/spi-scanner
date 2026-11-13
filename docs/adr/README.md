@@ -1,21 +1,12 @@
-# Architecture Decision Records (ADRs)
+# Decisiones de arquitectura
 
-Este directorio documenta formalmente las decisiones arquitectónicas clave tomadas en el diseño y construcción del **SPI Regulatory Scanner & Opportunity Radar**.
+Copia [la plantilla](0000-plantilla.md) a `NNNN-titulo.md` y asigna el siguiente número libre. Si una decisión cambia, crea un ADR nuevo, enlaza el anterior y actualiza este índice. Un reemplazo parcial conserva las partes que no fueron modificadas.
 
-Seguimos el estándar de documentación propuesto por Michael Nygard:
-- **Título**: Número secuencial y descripción breve.
-- **Estado**: `Propuesto`, `Aceptado`, `Reemplazado` o `Deprecado`.
-- **Contexto**: Qué problema o requerimiento motivó la decisión.
-- **Decisión**: Qué enfoque técnico o de diseño se adoptó.
-- **Consecuencias**: Beneficios, compromisos (*trade-offs*) e impactos operacionales.
-
----
-
-## 📑 Registro de Decisiones
-
-| ADR | Título | Estado | Fecha |
-| :--- | :--- | :--- | :--- |
-| **[ADR-0001](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0001-stack-firebase-vertex-ai.md)** | Elección del Stack: Firebase (Hosting, Firestore, Functions) y Vertex AI (Gemini) | **Aceptado** | 2026-11-07 |
-| **[ADR-0002](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0002-zero-noise-daily-digest-policy.md)** | Política de "Cero Ruido" y Estado Vacío en el Reporte Diario | **Aceptado** | 2026-11-07 |
-| **[ADR-0003](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0003-opportunity-radar-crm-taxonomy.md)** | Taxonomía Dual: Oportunidades Comerciales vs. Cumplimiento Mandatorio | **Aceptado** | 2026-11-07 |
-| **[ADR-0004](file:///Users/espohr/dev/spi-regulatory-scanner/docs/adr/0004-modular-source-ingestion-and-resilience.md)** | Arquitectura de Ingesta Modular y Resiliencia en Fuentes Oficiales LatAm | **Aceptado** | 2026-11-07 |
+| ADR | Decisión | Estado | Fecha |
+| --- | --- | --- | --- |
+| [0001](0001-stack-firebase-vertex-ai.md) | Firebase y Vertex AI | Aceptada; runtime/modelo reemplazados parcialmente por 0005 | 2026-11-07 |
+| [0002](0002-zero-noise-daily-digest-policy.md) | Digest de alta relevancia | Aceptada; alcance y cobertura reemplazados parcialmente por 0005 | 2026-11-07 |
+| [0003](0003-opportunity-radar-crm-taxonomy.md) | Taxonomía comercial/cumplimiento y gestión | Aceptada | 2026-11-07 |
+| [0004](0004-modular-source-ingestion-and-resilience.md) | Ingesta modular y resiliencia | Aceptada; catálogo/deduplicación reemplazados parcialmente por 0005 | 2026-11-07 |
+| [0005](0005-mvp-datos-reales-y-acceso.md) | Datos reales, fuentes dinámicas y acceso verificado | Aceptada | 2026-11-13 |
+| [0006](0006-gobernanza-y-validacion-reproducible.md) | Gobernanza y validación reproducible | Aceptada | 2026-11-13 |

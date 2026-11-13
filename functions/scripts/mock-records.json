@@ -1,0 +1,20 @@
+{
+  "regulatory_opportunities": [
+    "opp-co-invima-agil-2026",
+    "opp-mx-cofepris-nom241-2026",
+    "opp-co-sic-marcas-clase5-2026",
+    "opp-br-anvisa-rdc-samd-2026",
+    "opp-ar-anmat-suplementos-2026",
+    "opp-cl-isp-arancel-2026",
+    "opp-pe-digemid-bpf-2026"
+  ],
+  "team_members": [
+    "spi-user-1",
+    "spi-user-2",
+    "spi-user-3",
+    "spi-user-4"
+  ],
+  "daily_digests": [
+    "digest-2026-11-07"
+  ]
+}

@@ -31,6 +31,7 @@ export interface OfficialSourceConfig {
   frequencyHours: number;
   isActive: boolean;
   notes?: string;
+  itemLinkPattern?: string;
 }
 
 export interface RawRegulatoryDocument {

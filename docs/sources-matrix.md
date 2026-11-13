@@ -1,5 +1,7 @@
 # Matriz de Fuentes Oficiales — Núcleo LatAm (Fase 1)
 
+> Referencia de agencias y publicaciones, no garantía de conectores disponibles ni catálogo activo. La fuente de verdad es `official_sources` de Firestore. El escaneo automático corre una vez al día; las frecuencias de esta tabla no configuran tareas adicionales. Véase [arquitectura vigente](architecture.md) y [diagnóstico fechado](source-diagnostics-2026-11-13.md).
+
 Esta matriz documenta el catálogo de fuentes oficiales monitoreadas por el escáner, los tipos de actos administrativos publicados y sus particularidades técnicas de extracción.
 
 ---
@@ -65,8 +67,9 @@ Esta matriz documenta el catálogo de fuentes oficiales monitoreadas por el esc�
 
 ---
 
-## ⚠️ Estrategias de Resiliencia ante Fallos en Portales Gubernamentales
+## Resiliencia implementada
 
-1. **Protección contra Timeouts & Sitios Caídos:** Los portales de agencias sanitarias en LatAm experimentan caídas periódicas. El crawler implementa backoff exponencial y reintentos (máximo 3) sin bloquear el procesamiento del resto de las fuentes.
-2. **Gestión de CAPTCHAs y Bloqueos:** En sitios donde se presenten barreras anti-bot o páginas dinámicas pesadas (ASP.NET), la ingesta utiliza conectores basados en Playwright / Puppeteer headless desacoplados vía Cloud Functions.
-3. **Control de Duplicados:** Cada documento extraído genera un hash SHA-256 de su contenido y número de resolución, impidiendo que el motor de Gemini re-analice normas ya procesadas.
+1. Descarga HTTPS validada, direcciones públicas, preferencia IPv4 y un reintento ante errores transitorios de conexión. No hay backoff exponencial ni tres reintentos generales.
+2. Los CAPTCHAs y portales sin extracción implementada se reportan como bloqueo o formato no soportado. No hay conector headless desplegado ni OCR.
+3. Deduplicación por identidad de URL/fuente y análisis exitoso. No se detectan cambios de contenido en URLs ya procesadas; ver DEBT-008.
+4. El diagnóstico y los fallos parciales se guardan por fuente. Las fechas, cobertura y ejemplos reales se consultan en la app, no se infieren de esta matriz.

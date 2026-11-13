@@ -1,5 +1,7 @@
 # ADR-0002: Política de "Cero Ruido" y Estado Vacío en el Reporte Diario
 
+> Documento histórico: [ADR-0005](0005-mvp-datos-reales-y-acceso.md) reemplaza parcialmente esta decisión y documenta el contrato vigente.
+
 ## Estado
 **Aceptado**
 

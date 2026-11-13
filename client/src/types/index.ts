@@ -109,3 +109,31 @@ export interface DailyDigest {
   }>;
   executiveBriefingText: string;
 }
+
+
+export interface SourceHealth {
+  status: 'ok' | 'partial' | 'empty' | 'blocked' | 'unavailable' | 'unsupported';
+  code: string;
+  message: string;
+  checkedAt: string;
+  checkedUrl: string;
+  documentsFound: number;
+  errors: Array<{url:string;message:string}>;
+  preview: Array<{title:string;url:string;publicationDate:string}>;
+}
+
+export interface OfficialSource {
+  id: string;
+  name: string;
+  entityName: string;
+  country: CountryCode;
+  category: 'sanitary' | 'intellectual_property' | 'official_gazette';
+  feedUrl: string;
+  portalUrl: string;
+  isActive: boolean;
+  notes?: string;
+  deletedAt?: string;
+  health?: SourceHealth;
+}
+
+export type NewOfficialSource = Omit<OfficialSource, 'id' | 'deletedAt'>;

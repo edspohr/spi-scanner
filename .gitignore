@@ -9,3 +9,5 @@ firestore-debug.log*
 .env.local
 .env.*.local
 .firebase/
+
+.local/

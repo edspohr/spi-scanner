@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DailyDigest } from '../types';
-import { X, Mail, Copy, Check, Download, Sparkles, ShieldCheck } from 'lucide-react';
+import { X, Copy, Check, Download, Sparkles, ShieldCheck } from 'lucide-react';
 import { CountryBadge } from './CountryBadge';
 
 interface DailyDigestModalProps {
@@ -28,7 +28,14 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ isOpen, dige
   }, [isOpen, onClose]);
 
   // Si no está abierto o no hay datos, no renderizar
-  if (!isOpen || !digest) return null;
+  if (!isOpen) return null;
+  if (!digest) return <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" className="bg-white rounded-2xl p-8 max-w-md" onClick={e => e.stopPropagation()}>
+      <h3 className="font-bold mb-3">Reporte diario no disponible</h3>
+      <p className="text-sm text-slate-600 mb-4">Ejecuta un escaneo de fuentes oficiales para generar el primer reporte con resultados reales.</p>
+      <button onClick={onClose} className="bg-slate-900 text-white rounded-lg px-4 py-2 text-sm">Cerrar</button>
+    </div>
+  </div>;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(digest.executiveBriefingText);
@@ -113,10 +120,10 @@ export const DailyDigestModal: React.FC<DailyDigestModalProps> = ({ isOpen, dige
               <ShieldCheck className="w-6 h-6 text-emerald-600 flex-shrink-0" />
               <div>
                 <p className="text-xs font-bold text-emerald-900">
-                  Jornada sin contingencias normativas críticas
+                  Sin hallazgos críticos en el reporte
                 </p>
                 <p className="text-xs text-emerald-700">
-                  El escáner no detectó modificaciones perentorias ni riesgos de sanción hoy. Cero ruido en el reporte.
+                  No hay hallazgos críticos o de urgencia alta en las oportunidades incluidas en este reporte. Revisa el detalle de cobertura del escaneo.
                 </p>
               </div>
             </div>

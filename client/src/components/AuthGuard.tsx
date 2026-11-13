@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { User } from 'firebase/auth';
-import { onAuthChanged } from '../services/authService';
+import { onAuthChanged, canAccessApp } from '../services/authService';
 import { LoginPage } from './LoginPage';
 import { Loader2 } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthChanged((firebaseUser) => {
-      if (firebaseUser) {
+      if (firebaseUser && canAccessApp(firebaseUser)) {
         setUser(firebaseUser);
         setAuthState('authenticated');
       } else {

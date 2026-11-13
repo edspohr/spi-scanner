@@ -3,11 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── Función helper ────────────────────────────────────────────────────────
-    // Verifica que el usuario esté autenticado con cuenta @spiamericas.com
+    // Verifica que el usuario esté autenticado con correo verificado de un dominio autorizado
     function isSpiMember() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.matches('.*@spiamericas\\.com$')
+        && request.auth.token.email.lower().matches('^[^@]+@(spiamericas\\.com|spohr\\.cl)$')
         && request.auth.token.email_verified == true;
     }
 
@@ -20,7 +20,7 @@ service cloud.firestore {
     // ─── Fuentes oficiales (catálogo de agencias) ──────────────────────────────
     match /official_sources/{sourceId} {
       allow read: if isSpiMember();
-      allow write: if isSpiMember();
+      allow write: if false; // Validación y cambios mediante manageOfficialSource
     }
 
     // ─── Miembros del equipo SPI ───────────────────────────────────────────────
@@ -33,6 +33,10 @@ service cloud.firestore {
     match /daily_digests/{digestId} {
       allow read: if isSpiMember();
       // Solo Cloud Functions (admin SDK) pueden escribir; el cliente solo lee
+      allow write: if false;
+    }
+    match /scan_runs/{runId} {
+      allow read: if isSpiMember();
       allow write: if false;
     }
     // ─── Registro de deduplicación (solo Cloud Functions Admin SDK escribe) ────

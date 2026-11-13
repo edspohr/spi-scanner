@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
-import { CountryCode, RegulatoryOpportunity } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CountryCode } from '../types';
 import { RefreshCw, Play, Sparkles, CheckCircle2, ChevronDown, ChevronUp, FileCode } from 'lucide-react';
-import { analyzeDocumentWithVertexAI } from '../services/firestoreService';
+import { analyzeDocumentWithVertexAI, triggerOfficialScan, subscribeToLatestScan, ScanRun } from '../services/firestoreService';
 
-interface ScannerSimulatorProps {
-  onScanCompleted: (newOpps: RegulatoryOpportunity[]) => void;
-}
-
-export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanCompleted }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+export const OfficialScanner: React.FC = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>('CO');
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [publicationDate, setPublicationDate] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [customText, setCustomText] = useState<string>('');
   const [isCustomAnalyzing, setIsCustomAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const [lastRun, setLastRun] = useState<ScanRun | null>(null);
+  useEffect(() => subscribeToLatestScan(setLastRun, () => setErrorMessage('No se pudo consultar el estado del último escaneo.')), []);
 
   // Escaneo en vivo de fuentes oficiales
   const handleTriggerOfficialScan = async () => {
@@ -23,16 +24,12 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
     setStatusMessage('Conectando con Cloud Functions y escaneando fuentes de LatAm (INVIMA, COFEPRIS, ANVISA...)...');
 
     try {
-      const response = await fetch('https://us-central1-spi-scanner.cloudfunctions.net/triggerManualScan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: { country: selectedCountry } })
-      });
-      const data = await response.json();
-      setStatusMessage(`¡Escaneo oficial ejecutado con éxito! ${data.result?.sourcesChecked || 18} fuentes consultadas.`);
-    } catch (e: any) {
-      console.warn('Scan trigger info:', e);
-      setStatusMessage('Escaneo ejecutado. Fuentes oficiales sincronizadas en Firestore.');
+      const result = await triggerOfficialScan(selectedCountry);
+      setStatusMessage(`${result.sourcesSucceeded}/${result.sourcesAttempted} fuentes consultadas; ${result.documentsFound} documentos encontrados, ${result.documentsAnalyzed} analizados, ${result.documentsSkipped} ya procesados y ${result.opportunitiesFound} oportunidades nuevas.`);
+      if (result.errors.length) setErrorMessage('Consulta incompleta: ' + result.errors.map(e => `${e.sourceId}: ${e.error}`).join(' · '));
+    } catch (error: unknown) {
+      setStatusMessage('');
+      setErrorMessage(error instanceof Error ? error.message : 'No se pudo ejecutar el escaneo.');
     } finally {
       setIsScanning(false);
     }
@@ -44,12 +41,11 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
 
     setIsCustomAnalyzing(true);
     setErrorMessage('');
-    setStatusMessage('Enviando documento a Vertex AI (Gemini 1.5 Flash) para análisis legal estructurado...');
+    setStatusMessage('Enviando documento a Vertex AI (Gemini) para análisis legal estructurado...');
 
     try {
-      const result = await analyzeDocumentWithVertexAI(customText, selectedCountry);
+      const result = await analyzeDocumentWithVertexAI(customText, selectedCountry, sourceUrl, publicationDate);
       if (result && result.opportunity) {
-        onScanCompleted([result.opportunity]);
         setStatusMessage('¡Normativa analizada y clasificada por Vertex AI! Agregada al radar.');
         setCustomText('');
       } else if (result && result.isRelevant === false) {
@@ -66,28 +62,31 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm mb-8 overflow-hidden transition-all">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm mb-4 overflow-hidden transition-all">
       {/* Barra de Título con Botón para Colapsar/Ocultar */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
+        className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
+          <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-              Motor de Escaneo en Vivo & Análisis con Vertex AI (Gemini)
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              Escaneo y análisis de fuentes
             </h3>
             <p className="text-xs text-slate-500">
-              Vigilancia automatizada en fuentes de LatAm o evaluación de textos legales bajo demanda
+              Consulta fuentes para ambas áreas o analiza un documento oficial.
             </p>
           </div>
         </div>
 
         <button 
           className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition-colors"
+          aria-expanded={isExpanded}
+          aria-controls="scanner-panel"
+          aria-label={isExpanded ? "Ocultar escaneo y análisis" : "Mostrar escaneo y análisis"}
           title={isExpanded ? "Ocultar panel" : "Mostrar panel"}
         >
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -96,11 +95,12 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
 
       {/* Contenido Expandible */}
       {isExpanded && (
-        <div className="px-6 pb-6 pt-2 border-t border-slate-100 space-y-5 animate-in fade-in duration-150">
+        <div id="scanner-panel" className="px-6 pb-6 pt-2 border-t border-slate-100 space-y-5 animate-in fade-in duration-150">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
               <span>País objetivo:</span>
               <select
+                disabled={isScanning || isCustomAnalyzing}
                 value={selectedCountry}
                 onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
                 className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-sky-500"
@@ -117,7 +117,7 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
             {/* Botón Disparar Escaneo Oficial */}
             <button
               onClick={handleTriggerOfficialScan}
-              disabled={isScanning}
+              disabled={isScanning || isCustomAnalyzing}
               className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all ${
                 isScanning
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
@@ -128,6 +128,12 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
               <span>{isScanning ? 'Conectando fuentes...' : 'Escanear Fuentes Oficiales Ahora'}</span>
             </button>
           </div>
+
+          {lastRun && <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 space-y-1">
+            <p className="font-semibold">Último escaneo: {lastRun.country} · {new Date(lastRun.startedAt).toLocaleString()} · {{running: 'En curso', completed: 'Completado', partial: 'Consulta incompleta', failed: 'Falló'}[lastRun.status]}</p>
+            {lastRun.status !== 'running' && <p>{lastRun.sourcesSucceeded ?? 0}/{lastRun.sourcesAttempted ?? 0} fuentes consultadas · {lastRun.documentsAnalyzed ?? 0} documentos analizados · {lastRun.opportunitiesFound ?? 0} oportunidades nuevas</p>}
+            {!!lastRun.errors?.length && <details><summary className="cursor-pointer text-amber-800">Ver fuentes o análisis con error ({lastRun.errors.length})</summary><ul className="mt-2 space-y-1">{lastRun.errors.map((error, index) => <li key={index}>{error.sourceId}: {error.error}</li>)}</ul></details>}
+          </div>}
 
           {statusMessage && (
             <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs font-semibold text-sky-800 flex items-center gap-2">
@@ -146,19 +152,17 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
           <div className="pt-3 border-t border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <FileCode className="w-4 h-4 text-slate-500" /> Probar Análisis con Gemini (Pega el extracto de un decreto, circular o gaceta):
+                <FileCode className="w-4 h-4 text-slate-500" /> Analizar documento oficial (pega su texto y enlace de origen):
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomText('MINSALUD EXPIDE CIRCULAR 032-2026: Todos los titulares de registros sanitarios de medicamentos biológicos y biocomparables deberán actualizar sus planes de gestión de riesgo (PGR) dentro de los siguientes sesenta días calendario a la publicación de la presente. Aquellas empresas que no presenten el informe periódico de seguridad actualizado verán suspendida la comercialización.');
-                }}
-                className="text-[11px] text-sky-600 font-semibold hover:underline"
-              >
-                Cargar ejemplo de prueba
-              </button>
+
             </div>
 
+            <label className="block text-xs font-semibold text-slate-600">Enlace del documento oficial
+              <input type="url" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://..." className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-xs" />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">Fecha de publicación del documento
+              <input type="date" value={publicationDate} onChange={e => setPublicationDate(e.target.value)} className="ml-2 rounded-lg border border-slate-300 p-2 text-xs" />
+            </label>
             <div className="flex flex-col sm:flex-row gap-2">
               <textarea
                 value={customText}
@@ -170,9 +174,9 @@ export const ScannerSimulator: React.FC<ScannerSimulatorProps> = ({ onScanComple
               <button
                 type="button"
                 onClick={handleAnalyzeCustomDocument}
-                disabled={!customText.trim() || isCustomAnalyzing}
+                disabled={!customText.trim() || !sourceUrl.trim() || !publicationDate || isCustomAnalyzing || isScanning}
                 className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all sm:self-stretch ${
-                  !customText.trim() || isCustomAnalyzing
+                  !customText.trim() || !sourceUrl.trim() || !publicationDate || isCustomAnalyzing || isScanning
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     : 'bg-slate-900 hover:bg-slate-800 text-white'
                 }`}

@@ -1,120 +1,56 @@
-# Arquitectura del Sistema — SPI Regulatory Scanner
+# Arquitectura vigente
 
-## 1. Visión General
-El **SPI Regulatory Scanner & Opportunity Radar** es un sistema serverless distribuido desplegado sobre la plataforma **Firebase** y respaldado por la infraestructura de **Google Cloud Vertex AI**. Su objetivo es transformar actos normativos, resoluciones y boletines emitidos por entidades oficiales de América Latina en acciones de negocio estructuradas para el equipo de **SPI Américas**.
+Contratos actualizados por [ADR-0005](adr/0005-mvp-datos-reales-y-acceso.md). Los ADR originales conservan el contexto histórico; no prevalecen sobre las decisiones que los reemplazan parcialmente.
+
+## Componentes
 
 ```mermaid
-flowchart TD
-    subgraph Fuentes ["Capa de Fuentes Oficiales (LatAm)"]
-        F1["INVIMA / MinSalud / SIC (CO)"]
-        F2["COFEPRIS / IMPI / DOF (MX)"]
-        F3["ANVISA / INPI / DOU (BR)"]
-        F4["ANMAT / INPI / BORA (AR)"]
-        F5["ISP / INAPI / DO (CL)"]
-        F6["DIGEMID / INDECOPI / El Peruano (PE)"]
-    end
-
-    subgraph Backend ["Backend: Firebase Cloud Functions (2nd Gen)"]
-        Scheduler["Scheduled Function (Cron 06:00 AM)"]
-        Scrapers["Extractores Modulares por Entidad"]
-        Normalizer["Normalizador de Documentos Raw"]
-        GeminiPipe["Vertex AI Client (Gemini 1.5 Flash)"]
-        DigestGen["Generador de Daily Digest"]
-    end
-
-    subgraph BaseDatos ["Capa de Persistencia (Cloud Firestore)"]
-        CollOpps[("regulatory_opportunities")]
-        CollSources[("official_sources")]
-        CollTeam[("team_members")]
-        CollDigests[("daily_digests")]
-    end
-
-    subgraph Frontend ["Frontend Web (Firebase Hosting)"]
-        UI_Dash["Dashboard de Métricas & Feed React"]
-        UI_Detail["Visor con Citas Legales & Análisis"]
-        UI_CRM["Modal de Asignación & CRM"]
-        UI_Digest["Visor de Briefing Diario"]
-        UI_Sim["Simulador de Escaneo & Evaluador"]
-    end
-
-    Fuentes --> Scrapers
-    Scheduler --> Scrapers
-    Scrapers --> Normalizer
-    Normalizer --> GeminiPipe
-    GeminiPipe --> CollOpps
-    CollOpps --> DigestGen
-    DigestGen --> CollDigests
-    CollOpps <--> UI_Dash
-    CollDigests <--> UI_Digest
-    UI_CRM --> CollOpps
+flowchart LR
+  Web[React en Firebase Hosting] --> Auth[Firebase Authentication]
+  Web --> DB[(Cloud Firestore)]
+  Web --> Callables[Funciones autenticadas]
+  Cron[Cloud Scheduler] --> Scanner[Escáner Node 22]
+  Callables --> Scanner
+  DB --> Catalog[Catálogo official_sources]
+  Catalog --> Scanner
+  Scanner --> Public[Descarga HTTPS y extracción]
+  Public --> AI[Vertex AI: análisis estructurado]
+  AI --> DB
+  Scanner --> Health[Diagnóstico, cobertura y deduplicación]
+  Health --> DB
 ```
 
----
+- Cliente: React 18, TypeScript, Vite y Tailwind. Las áreas Regulatorio/PI son filtros de trabajo, no RBAC.
+- Backend: Cloud Functions 2nd Gen, Node 22, región `us-central1`. El escaneo diario usa `America/Bogota`.
+- IA: `@google-cloud/vertexai`; modelo configurable en `functions/src/ai/config.ts` (`gemini-3.5-flash`, región `global` por defecto). La cuenta de servicio accede a Vertex AI mediante IAM. El SDK necesita actualización; véase DEBT-009.
+- Catálogo: Firestore, sin fallback estático. La baja conserva el documento con `deletedAt` y excluye la fuente de nuevas ejecuciones.
 
-## 2. Componentes del Sistema
+## Datos y autorización
 
-### 2.1 Ingesta y Extracción (`functions/src/sources/`)
-- **Registro Central de Fuentes (`registry.ts`):** Catálogo tipado que define metadatos por entidad: país, categoría (`sanitary`, `intellectual_property`, `official_gazette`), sectores cubiertos, URLs de feeds/portales y periodicidad de escaneo.
-- **Normalizador de Documentos Raw:** Convierte formatos dispares (HTML, RSS, XML, texto plano) a la estructura unificada `RawRegulatoryDocument`.
+| Colección | Contrato del cliente autenticado |
+| --- | --- |
+| `regulatory_opportunities` | Lectura y gestión de oportunidades, asignaciones y notas. |
+| `team_members` | Lectura y escritura de directorio. |
+| `official_sources` | Solo lectura directa; cambios validados por `manageOfficialSource`. |
+| `daily_digests` | Solo lectura; el backend genera reportes. |
+| `scan_runs` | Solo lectura de cobertura y errores. |
+| `processed_documents` | Solo lectura; el backend escribe deduplicación. |
+| `scanner_state` | Sin acceso del cliente; lock exclusivo del backend. |
 
-### 2.2 Pipeline de Inteligencia (`functions/src/ai/`)
-- **Motor Vertex AI Gemini (`geminiAnalyzer.ts`):** 
-  - Utiliza el modelo `gemini-1.5-flash-002` con temperatura baja (`0.1`) para garantizar máxima fidelidad legal y mínima alucinación.
-  - Implementa un `responseSchema` estricto de JSON.
-  - El system prompt encarna el rol de *Director Senior de Asuntos Regulatorios y PI de SPI Américas*, obligando a descartar actos administrativos de rutina y evaluar impacto comercial directo.
-- **Generador de Digest Diario (`dailyDigest.ts`):**
-  - Aplica filtro de urgencia estricto (`critical` y `high`).
-  - Genera un briefing ejecutivo sintético para la dirección de SPI.
-  - Si no hay novedades de alto impacto, genera el estado especial de "Sin novedades críticas", sin saturar con falsos positivos.
+Las reglas y `requireSpiMember` exigen email verificado de `spiamericas.com` o `spohr.cl`. Los callables rechazan sesiones ausentes o no autorizadas; el reporte HTTP verifica el ID token. **App Check no está impuesto.** No hay aislamiento multicliente ni permisos por vertical: registrar roles más finos requiere otra decisión y pruebas.
 
-### 2.3 Persistencia y Modelo de Datos (`Cloud Firestore`)
+## Ingesta y fallos parciales
 
-#### Colección `regulatory_opportunities`
-Documentos que representan un hallazgo analizado y enriquecido por la IA:
-```typescript
-{
-  id: string;                      // opp-co-invima-agil-2026
-  documentId: string;              // Identificador de la norma
-  title: string;                   // Título sintetizado
-  country: 'CO' | 'MX' | 'BR' | 'AR' | 'CL' | 'PE';
-  entityName: string;              // INVIMA, COFEPRIS, ANVISA...
-  sectors: RegulatorySector[];     // farma, medical_devices, etc.
-  sourceUrl: string;               // URL a la norma oficial
-  publicationDate: string;         // YYYY-MM-DD
-  documentNumber?: string;         // Resolución 014-2026, etc.
-  isRelevant: boolean;
-  opportunityType: 'commercial_opportunity' | 'mandatory_compliance';
-  urgency: 'critical' | 'high' | 'medium' | 'low';
-  executiveSummary: string;
-  detailedAnalysis: string;
-  effectiveDate?: string;
-  transitionalDeadline?: string;
-  daysRemainingForAction?: number;
-  spiActionPlan: {
-    whatClientsNeedToDo: string;
-    howSpiCanHelp: string;
-    affectedClientProfile: string;
-    recommendedServiceOffering?: string;
-  };
-  citations: Array<{
-    articleOrSection: string;
-    quoteText: string;
-    interpretation: string;
-  }>;
-  status: 'nueva' | 'en_evaluacion' | 'asignada' | 'contactando_clientes' | 'cerrada';
-  assignedTo?: { id: string; name: string; email: string; role: string; };
-  assignedAt?: string;
-  managementNotes?: Array<{ author: string; date: string; comment: string; }>;
-}
-```
+Cada fuente se descarga con HTTPS validado, direcciones DNS públicas y conexión fijada a la dirección validada, incluyendo redirecciones. Se prefiere IPv4 y hay un reintento ante errores transitorios de conexión. No se omite la validación de certificados ni se resuelven CAPTCHAs automáticamente.
 
----
+Los formatos soportados son RSS/Atom, HTML, listado JSON público de ANVISA y PDF con texto. Los enlaces PDF cortos usan el contexto de su fila. La muestra está limitada a 15 MB, 20 páginas y 30.000 caracteres por documento. No existe OCR.
 
-## 3. Seguridad y Control de Acceso
+Los documentos legibles se conservan aunque otros fallen. `health` distingue éxito, lectura parcial, feed vacío, bloqueo, indisponibilidad y formato no soportado; las comprobaciones de lectura no invocan Gemini. El escaneo incluye presupuestos de tiempo y puede dejar fuentes pendientes. La ejecución queda registrada como parcial cuando hay fallos o cobertura incompleta.
 
-- **Reglas de Seguridad Firestore (`firestore.rules`):**
-  - Control de lectura/escritura por colección.
-  - Preparado para restringir mutaciones de asignaciones exclusivamente a usuarios autenticados con dominio `@spiamericas.com`.
-- **Ejecución de Cloud Functions:**
-  - Invocación de scrapers protegida mediante Cloud Scheduler (roles de servicio IAM `roles/cloudscheduler.serviceAgent`).
-  - Endpoints de mutación de tareas (`assignOpportunityToMember`) protegidos con Firebase App Check y verificación de token en producción.
+La identidad del documento deriva de su URL y fuente; `processed_documents` registra los análisis exitosos. La oportunidad usa un ID determinista y `create()` para conservar asignaciones al reintentar. Esto **no** detecta cambios de contenido en una URL ya procesada (DEBT-008).
+
+## Contrato de IA y reporte
+
+El analizador solicita JSON con esquema, valida clasificación con Zod y conserva solo citas contenidas en el texto de entrada. Los errores se propagan y dejan el documento disponible para reintento. La normalización no demuestra fidelidad semántica de resúmenes, fechas o interpretación: se requiere revisión profesional y evaluación adicional.
+
+El digest destaca urgencias `critical` y `high`, conserva estadísticas y declara cobertura/error. Un reporte sin hallazgos prioritarios se limita a los documentos consultados. No equivale a una declaración de ausencia de obligaciones legales. No hay envío automático de correo. Las evaluaciones locales de contrato y sus límites se describen en el README y DEBT-006.
