@@ -7,7 +7,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error('Run npm run test:rule
 const [host,port]=process.env.FIRESTORE_EMULATOR_HOST.split(':');
 let environment;
 before(async()=>{
-  environment=await initializeTestEnvironment({projectId:'demo-spi-scanner',firestore:{host,port:Number(port),rules:await readFile(new URL('../firestore.rules',import.meta.url),'utf8')}});
+  environment=await initializeTestEnvironment({projectId:'demo-spi-scanner',firestore:{host,port:Number(port),rules:(await readFile(new URL('../firestore.rules',import.meta.url),'utf8')).replaceAll('felipe@sumadots.com','collaborator@example.org')}});
 });
 after(async()=>{await environment?.cleanup();});
 beforeEach(async()=>{
@@ -54,4 +54,13 @@ test('scanner locks and unknown collections are inaccessible to clients',async()
     await assertFails(getDoc(doc(db,collection,'synthetic')));
     await assertFails(setDoc(doc(db,collection,'new'),{title:'Synthetic mutation'}));
   }
+});
+
+test('explicit collaborator has member access only with verified exact email',async()=>{
+  const db=member('collaborator@example.org');
+  await assertSucceeds(getDoc(doc(db,'regulatory_opportunities','synthetic')));
+  await assertSucceeds(setDoc(doc(db,'regulatory_opportunities','new'),{title:'Synthetic opportunity'}));
+  await assertFails(getDoc(doc(member('collaborator@example.org',false),'team_members','synthetic')));
+  await assertFails(getDoc(doc(member('other@example.org'),'team_members','synthetic')));
+  await assertFails(getDoc(doc(member('collaborator@example.org.evil.com'),'team_members','synthetic')));
 });

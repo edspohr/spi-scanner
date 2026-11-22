@@ -10,3 +10,4 @@ Copia [la plantilla](0000-plantilla.md) a `NNNN-titulo.md` y asigna el siguiente
 | [0004](0004-modular-source-ingestion-and-resilience.md) | Ingesta modular y resiliencia | Aceptada; catálogo/deduplicación reemplazados parcialmente por 0005 | 2026-11-07 |
 | [0005](0005-mvp-datos-reales-y-acceso.md) | Datos reales, fuentes dinámicas y acceso verificado | Aceptada | 2026-11-13 |
 | [0006](0006-gobernanza-y-validacion-reproducible.md) | Gobernanza y validación reproducible | Aceptada | 2026-11-13 |
+| [0007](0007-colaboradores-autorizados.md) | Colaboradores autorizados por correo exacto | Aceptada | 2026-11-22 |

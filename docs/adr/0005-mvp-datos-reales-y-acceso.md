@@ -4,6 +4,8 @@
 - Fecha — 2026-11-13
 - Relacionados — Reemplaza parcialmente ADR-0001 (runtime/modelo), ADR-0002 (alcance del reporte) y ADR-0004 (catálogo y deduplicación). Conserva la taxonomía de ADR-0003.
 
+El acceso se amplía con colaboradores individuales en [ADR-0007](0007-colaboradores-autorizados.md).
+
 ## Contexto
 
 Las pruebas del MVP detectaron errores de login, sustitución de fallos por datos mock, fuentes que no entregaban texto y divergencias entre documentación y código. SPI necesita trabajo separado para Regulatorio/PI y una visión general para dirección. Los cambios de autenticación, ingesta y UI fueron solicitados y publicados durante la puesta en marcha del 12 y 13 de noviembre.

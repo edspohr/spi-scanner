@@ -5,13 +5,14 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 
-const ALLOWED_DOMAINS = ['spiamericas.com', 'spohr.cl'];
+const ALLOWED_EMAILS = ['felipe@sumadots.com'];
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 auth.languageCode = 'es';
 
 export function isAllowedEmail(email: string | null): boolean {
-  return ALLOWED_DOMAINS.includes((email ?? '').trim().toLowerCase().split('@')[1] ?? '');
+  const normalized = (email ?? '').trim().toLowerCase();
+  return ALLOWED_EMAILS.includes(normalized) || /^[^@]+@(spiamericas\.com|spohr\.cl)$/.test(normalized);
 }
 
 export function canAccessApp(user: User): boolean {
@@ -21,7 +22,7 @@ export function canAccessApp(user: User): boolean {
 function checkEmail(email: string): string {
   const normalized = email.trim().toLowerCase();
   if (!isAllowedEmail(normalized)) {
-    throw new Error('Acceso restringido a cuentas @spiamericas.com y @spohr.cl.');
+    throw new Error('Acceso restringido a miembros y colaboradores autorizados.');
   }
   return normalized;
 }

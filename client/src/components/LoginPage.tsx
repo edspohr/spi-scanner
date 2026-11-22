@@ -79,7 +79,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div className="flex items-start gap-2.5 bg-sky-500/10 border border-sky-500/20 rounded-xl px-4 py-3 w-full">
           <Shield className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
           <p className="text-xs text-sky-300 leading-relaxed">
-            Acceso restringido a cuentas <span className="font-bold text-sky-200">@spiamericas.com</span> y <span className="font-bold text-sky-200">@spohr.cl</span>.
+            Acceso restringido a miembros y colaboradores autorizados.
             Ingresa con Google o con tu correo y contraseña.
           </p>
         </div>

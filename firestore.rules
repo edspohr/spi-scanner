@@ -7,7 +7,8 @@ service cloud.firestore {
     function isSpiMember() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.lower().matches('^[^@]+@(spiamericas\\.com|spohr\\.cl)$')
+        && (request.auth.token.email.lower() == 'felipe@sumadots.com'
+          || request.auth.token.email.lower().matches('^[^@]+@(spiamericas\\.com|spohr\\.cl)$'))
         && request.auth.token.email_verified == true;
     }
 

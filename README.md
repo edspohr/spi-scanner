@@ -64,7 +64,7 @@ Las evaluaciones de IA verifican formato, clasificación válida, procedencia, c
 
 ## Uso del MVP
 
-- Acceso con Google o correo/contraseña para miembros con email verificado de `spiamericas.com` o `spohr.cl`. Recuperación de clave y reenvío de verificación desde login.
+- Acceso con Google o correo/contraseña para miembros con email verificado de `spiamericas.com` o `spohr.cl`, y colaboradores habilitados por correo exacto. Recuperación de clave y reenvío de verificación desde login.
 - [Visión general](https://spi-scanner.web.app/#radar), [Regulatorio](https://spi-scanner.web.app/#radar/regulatorio) y [PI](https://spi-scanner.web.app/#radar/pi). Son vistas de trabajo, no permisos distintos. PI conserva su área aunque afecte a industrias sanitarias.
 - Prioridades: Todas, Requieren atención, Sin asignar y En gestión. Las cerradas solo aparecen en Todas. La atención incluye críticas/altas y próximos plazos informados a 30 días o menos, incluidos vencidos.
 - El próximo plazo utiliza fechas válidas de transición/comentarios; la entrada en vigor no se presenta como vencimiento. Sin fecha informada no se inventa un plazo.
